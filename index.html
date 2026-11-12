@@ -1,0 +1,2449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b0508" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>A Promise</title>
+  <link rel="manifest" href="./manifest.json" />
+
+  <!-- Embedded SVG Ring Icon for PWA / APK Readiness -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='28' fill='%230b0508'/%3E%3Ccircle cx='64' cy='70' r='32' fill='none' stroke='%23e6b87d' stroke-width='7'/%3E%3Cpolygon points='64,22 76,34 64,44 52,34' fill='%23fff5e4' stroke='%23e6b87d' stroke-width='2'/%3E%3C/svg%3E" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0b0508;
+      color: #f7ece6;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overscroll-behavior: none;
+    }
+
+    .font-serif-editorial {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+    }
+
+    canvas#scene {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    .glass-card {
+      background: rgba(20, 9, 15, 0.84);
+      border: 1px solid rgba(230, 184, 125, 0.26);
+      box-shadow: 0 28px 70px rgba(0, 0, 0, 0.78), inset 0 0 36px rgba(230, 184, 125, 0.05);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .overlay-layer {
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+
+    .overlay-hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.985);
+    }
+
+    .overlay-visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+    }
+
+    .gold-gradient-btn {
+      background: linear-gradient(135deg, #c96b7c 0%, #e6b87d 100%);
+      color: #14070c;
+      box-shadow: 0 10px 28px rgba(230, 184, 125, 0.3);
+      transition: transform 0.18s ease, box-shadow 0.25s ease;
+    }
+
+    .gold-gradient-btn:active {
+      transform: scale(0.97);
+    }
+
+    /* Subtle custom scrollbar for playlist drawer */
+    #track-list-items::-webkit-scrollbar {
+      width: 4px;
+    }
+    #track-list-items::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 99px;
+    }
+    #track-list-items::-webkit-scrollbar-thumb {
+      background: rgba(230, 184, 125, 0.3);
+      border-radius: 99px;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 18px rgba(230, 184, 125, 0.25); }
+      50% { box-shadow: 0 0 34px rgba(230, 184, 125, 0.55); }
+    }
+
+    .ring-aura {
+      animation: pulseGlow 3.2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body>
+  <!-- Fullscreen Interactive Canvas -->
+  <canvas id="scene"></canvas>
+
+  <!-- Top HUD (Active During Gameplay & Ambient Drift) -->
+  <header id="hud" class="fixed top-0 left-0 right-0 z-20 px-4 py-3.5 flex items-center justify-between gap-2.5 opacity-0 pointer-events-none transition-opacity duration-500">
+    <!-- Left: Home Button -->
+    <button id="home-btn" type="button" aria-label="Return Home" class="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#190c12]/80 border border-[#e6b87d]/30 text-[#e6b87d] text-xs tracking-wider uppercase backdrop-blur-md active:scale-95 transition shrink-0">
+      <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5z" />
+      </svg>
+      <span>Home</span>
+    </button>
+
+    <!-- Center: Level, Ember & Warmth Progress Bars -->
+    <div id="hud-meters" class="flex-1 max-w-xs mx-auto space-y-1.5">
+      <div class="flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-[#f7ece6]/75">
+        <span id="hud-level-badge">Lv 1/25</span>
+        <span id="hud-ember-count">0 / 7</span>
+      </div>
+      <div class="w-full h-1.5 bg-[#e6b87d]/15 rounded-full overflow-hidden">
+        <div id="progress-bar" class="h-full w-0 bg-gradient-to-r from-[#b85d6f] to-[#e6b87d] rounded-full transition-all duration-200"></div>
+      </div>
+      <div class="w-full h-1 bg-[#d9536f]/15 rounded-full overflow-hidden">
+        <div id="warmth-bar" class="h-full w-full bg-gradient-to-r from-[#d9536f] via-[#e6b87d] to-[#fff5e4] rounded-full transition-all duration-100"></div>
+      </div>
+    </div>
+
+    <!-- Ambient Mode Label (Shown only in Drift Mode) -->
+    <div id="hud-ambient-label" class="hidden flex-1 text-center text-[11px] uppercase tracking-[0.22em] text-[#e6b87d]/80">
+      Ambient Drift
+    </div>
+
+    <!-- Right: Audio Toggle -->
+    <button id="audio-btn" type="button" aria-label="Toggle Soundtrack" class="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#190c12]/80 border border-[#e6b87d]/30 text-[#e6b87d] text-xs backdrop-blur-md active:scale-95 transition max-w-[130px] shrink-0">
+      <span id="audio-dot" class="w-1.5 h-1.5 rounded-full bg-[#e6b87d] shrink-0"></span>
+      <span id="track-label" class="truncate text-[11px]">Soundtrack</span>
+    </button>
+  </header>
+
+  <!-- SCREEN 1: Local Profile Login / Creation -->
+  <section id="auth-screen" class="overlay-layer overlay-visible fixed inset-0 z-30 flex items-center justify-center p-5 bg-[radial-gradient(circle_at_center,rgba(32,12,21,0.72),rgba(11,5,8,0.96))]">
+    <div class="glass-card w-full max-w-md rounded-3xl p-7 sm:p-8 text-center">
+      <p class="uppercase tracking-[0.26em] text-[11px] text-[#e6b87d] mb-2">Private Keepsake</p>
+      <h1 class="font-serif-editorial text-3xl sm:text-4xl text-[#fff5ef] leading-tight mb-2">
+        A Promise Awaits
+      </h1>
+      <p class="text-xs sm:text-sm text-[#f7ece6]/70 leading-relaxed mb-5">
+        Sign in or create your local profile so your progress across all 25 levels stays saved offline.
+      </p>
+
+      <!-- Mode Switcher Tabs -->
+      <div class="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-[#12070c]/80 border border-[#e6b87d]/20 mb-5">
+        <button id="tab-signin" type="button" class="py-2 rounded-xl text-xs uppercase tracking-[0.16em] font-medium bg-[#e6b87d]/20 text-[#fff5ef] transition">
+          Sign In
+        </button>
+        <button id="tab-create" type="button" class="py-2 rounded-xl text-xs uppercase tracking-[0.16em] font-medium text-[#f7ece6]/60 hover:text-[#f7ece6] transition">
+          New Profile
+        </button>
+      </div>
+
+      <form id="auth-form" class="space-y-3.5 text-left" autocomplete="off">
+        <div>
+          <label for="auth-username" class="block text-[10px] uppercase tracking-[0.2em] text-[#e6b87d]/80 mb-1.5">Your Name</label>
+          <input id="auth-username" type="text" maxlength="24" placeholder="Enter your name" required class="w-full px-4 py-3 rounded-2xl bg-[#12070c]/90 border border-[#e6b87d]/25 text-[#fff5ef] placeholder-[#f7ece6]/30 text-sm focus:outline-none focus:border-[#e6b87d]" />
+        </div>
+
+        <div>
+          <label for="auth-pin" class="block text-[10px] uppercase tracking-[0.2em] text-[#e6b87d]/80 mb-1.5">4-Digit Secret PIN</label>
+          <input id="auth-pin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required class="w-full px-4 py-3 rounded-2xl bg-[#12070c]/90 border border-[#e6b87d]/25 text-[#fff5ef] placeholder-[#f7ece6]/30 text-sm tracking-[0.35em] focus:outline-none focus:border-[#e6b87d]" />
+        </div>
+
+        <p id="auth-error" class="hidden text-xs text-[#f07a90] text-center pt-1"></p>
+
+        <button id="auth-submit-btn" type="submit" class="gold-gradient-btn w-full py-3.5 rounded-full text-xs sm:text-sm font-semibold uppercase tracking-[0.18em] mt-2">
+          Unlock Sanctuary
+        </button>
+      </form>
+
+      <button id="quick-continue-btn" type="button" class="hidden w-full mt-3 py-2.5 rounded-full border border-[#e6b87d]/30 text-[#e6b87d] text-xs uppercase tracking-[0.16em] hover:bg-[#e6b87d]/10 transition">
+        Continue as Saved Profile
+      </button>
+    </div>
+  </section>
+
+  <!-- SCREEN 2: App Home Screen & Soundtrack Lounge -->
+  <section id="intro-screen" class="overlay-layer overlay-hidden fixed inset-0 z-30 flex items-center justify-center p-4 sm:p-5 bg-[radial-gradient(circle_at_center,rgba(32,12,21,0.68),rgba(11,5,8,0.94))] overflow-y-auto">
+    <div class="glass-card w-full max-w-md rounded-3xl p-6 sm:p-7 text-center my-auto">
+      <!-- Top Profile & Progress Row -->
+      <div class="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-[#e6b87d]/15">
+        <div class="text-left">
+          <p id="home-welcome-user" class="text-xs font-medium text-[#fff5ef]">Welcome</p>
+          <button id="switch-user-btn" type="button" class="text-[10px] uppercase tracking-[0.18em] text-[#e6b87d]/70 hover:text-[#e6b87d] transition">
+            Switch Profile
+          </button>
+        </div>
+        <span id="home-best-badge" class="px-3 py-1 rounded-full bg-[#e6b87d]/12 border border-[#e6b87d]/25 text-[10px] uppercase tracking-[0.16em] text-[#e6b87d]">
+          Level 1 / 25
+        </span>
+      </div>
+
+      <h2 class="font-serif-editorial text-3xl sm:text-[34px] text-[#fff5ef] leading-tight mb-2">
+        Weave the Silk Thread
+      </h2>
+      <p id="home-tier-desc" class="text-xs sm:text-sm text-[#f7ece6]/75 leading-relaxed mb-4">
+        Guide the continuous golden ribbon through every ember without tangling or touching the crimson thorns. Complete all 25 levels to reveal the promise.
+      </p>
+
+      <!-- Level Selector -->
+      <div class="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-2xl bg-[#14080e]/85 border border-[#e6b87d]/20 mb-3.5">
+        <button id="prev-level-btn" type="button" aria-label="Previous Level" class="p-2 rounded-full text-[#e6b87d] hover:bg-[#e6b87d]/15 disabled:opacity-30 transition">
+          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <div class="text-center">
+          <p id="selected-level-label" class="text-xs font-semibold uppercase tracking-[0.18em] text-[#fff5ef]">Level 1 • Awakening</p>
+          <p id="selected-level-meta" class="text-[11px] text-[#e6b87d]/80 mt-0.5">7 Embers • 3 Shadow Thorns</p>
+        </div>
+        <button id="next-level-btn" type="button" aria-label="Next Level" class="p-2 rounded-full text-[#e6b87d] hover:bg-[#e6b87d]/15 disabled:opacity-30 transition">
+          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Soundtrack Lounge Controls -->
+      <div class="rounded-2xl bg-[#14080e]/85 border border-[#e6b87d]/20 p-3 mb-4">
+        <div class="flex items-center justify-between gap-2">
+          <button id="prev-track-btn" type="button" aria-label="Previous Track" class="p-2 rounded-full text-[#e6b87d]/80 hover:text-[#e6b87d] hover:bg-[#e6b87d]/10 transition shrink-0">
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="19 20 9 12 19 4 19 20" />
+              <line x1="5" y1="19" x2="5" y2="5" />
+            </svg>
+          </button>
+
+          <button id="home-audio-btn" type="button" class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-full bg-[#e6b87d]/12 hover:bg-[#e6b87d]/20 text-[#e6b87d] text-xs transition min-w-0">
+            <span id="home-audio-dot" class="w-2 h-2 rounded-full bg-[#e6b87d]/40 shrink-0"></span>
+            <span id="home-track-label" class="truncate">Play • I. Velvet Midnight</span>
+          </button>
+
+          <button id="next-track-btn" type="button" aria-label="Next Track" class="p-2 rounded-full text-[#e6b87d]/80 hover:text-[#e6b87d] hover:bg-[#e6b87d]/10 transition shrink-0">
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 4 15 12 5 20 5 4" />
+              <line x1="19" y1="5" x2="19" y2="19" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Expandable Playlist & Custom Audio Drawer -->
+        <div class="mt-2 pt-2 border-t border-[#e6b87d]/10 flex justify-center">
+          <button id="toggle-playlist-btn" type="button" class="text-[10px] uppercase tracking-[0.2em] text-[#e6b87d]/80 hover:text-[#e6b87d] transition flex items-center gap-1.5 py-0.5">
+            <span id="playlist-toggle-text">Browse 15 Tracks &amp; Add Songs</span>
+            <svg id="playlist-chevron" viewBox="0 0 24 24" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
+
+        <div id="track-list-drawer" class="hidden mt-2 pt-2 border-t border-[#e6b87d]/15 space-y-2 text-left">
+          <div id="track-list-items" class="max-h-36 overflow-y-auto space-y-1 pr-1"></div>
+
+          <!-- Offline Device Audio Importer -->
+          <div class="pt-1.5 border-t border-[#e6b87d]/10">
+            <input id="custom-audio-input" type="file" accept="audio/*" multiple class="hidden" />
+            <button id="add-music-btn" type="button" class="w-full py-2 px-3 rounded-xl bg-[#e6b87d]/12 hover:bg-[#e6b87d]/20 border border-[#e6b87d]/25 text-[#e6b87d] text-[10px] uppercase tracking-[0.16em] transition flex items-center justify-center gap-1.5">
+              <span>+ Add Songs From Device (Offline)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Primary Home Actions -->
+      <div class="flex flex-col gap-2.5">
+        <button id="start-btn" type="button" class="gold-gradient-btn w-full py-3.5 rounded-full text-xs sm:text-sm font-semibold uppercase tracking-[0.18em]">
+          Begin Level 1
+        </button>
+
+        <button id="ambient-btn" type="button" class="w-full py-3 rounded-full border border-[#e6b87d]/30 text-[#f7ece6]/85 hover:bg-[#e6b87d]/10 text-xs uppercase tracking-[0.18em] transition">
+          Just Drift &amp; Listen
+        </button>
+
+        <button id="view-invite-shortcut" type="button" class="hidden w-full py-3 rounded-full bg-[#e6b87d]/18 border border-[#e6b87d]/45 text-[#fff5ef] text-xs uppercase tracking-[0.18em] ring-aura transition">
+          Open Unlocked Invitation
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCREEN 3: Level Cleared Transition Overlay -->
+  <section id="levelup-screen" class="overlay-layer overlay-hidden fixed inset-0 z-30 flex items-center justify-center p-5 bg-[radial-gradient(circle_at_center,rgba(34,13,22,0.78),rgba(11,5,8,0.95))]">
+    <div class="glass-card w-full max-w-sm rounded-3xl p-7 text-center">
+      <p id="levelup-tier-info" class="uppercase tracking-[0.24em] text-[10px] text-[#e6b87d] mb-2">Tier I • Complete</p>
+      <h2 id="levelup-title" class="font-serif-editorial text-3xl text-[#fff5ef] mb-2">Constellation Woven</h2>
+      <p id="levelup-subtitle" class="text-xs sm:text-sm text-[#f7ece6]/75 leading-relaxed mb-6">
+        The silk thread grows stronger. Step forward into the next chapter.
+      </p>
+
+      <div class="flex flex-col gap-2.5">
+        <button id="next-level-btn-modal" type="button" class="gold-gradient-btn w-full py-3.5 rounded-full text-xs sm:text-sm font-semibold uppercase tracking-[0.18em]">
+          Continue to Level 2
+        </button>
+        <button id="levelup-home-btn" type="button" class="w-full py-3 rounded-full border border-[#e6b87d]/30 text-[#e6b87d] text-xs uppercase tracking-[0.18em] hover:bg-[#e6b87d]/10 transition">
+          Return Home
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCREEN 4: Thread Snapped / Retry Screen -->
+  <section id="fail-screen" class="overlay-layer overlay-hidden fixed inset-0 z-30 flex items-center justify-center p-5 bg-[radial-gradient(circle_at_center,rgba(45,10,20,0.8),rgba(11,5,8,0.96))]">
+    <div class="glass-card w-full max-w-sm rounded-3xl p-7 text-center">
+      <p id="fail-tier-tag" class="uppercase tracking-[0.24em] text-[10px] text-[#d9536f] mb-2">Level 1 • Thread Snapped</p>
+      <h2 class="font-serif-editorial text-3xl text-[#fff5ef] mb-2">The Silk Unraveled</h2>
+      <p id="fail-reason" class="text-xs sm:text-sm text-[#f7ece6]/75 leading-relaxed mb-3">
+        A shadow thorn pierced the ribbon before the constellation was complete.
+      </p>
+      <p id="fail-stats" class="text-[11px] uppercase tracking-[0.18em] text-[#e6b87d]/85 mb-6">
+        Woven: 0 / 7 Embers
+      </p>
+
+      <div class="flex flex-col gap-2.5">
+        <button id="retry-btn" type="button" class="gold-gradient-btn w-full py-3.5 rounded-full text-xs sm:text-sm font-semibold uppercase tracking-[0.18em]">
+          Weave Again
+        </button>
+        <button id="fail-home-btn" type="button" class="w-full py-3 rounded-full border border-[#e6b87d]/30 text-[#e6b87d] text-xs uppercase tracking-[0.18em] hover:bg-[#e6b87d]/10 transition">
+          Return Home
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCREEN 5: Unlocked Promise Ring Invitation -->
+  <section id="invite-screen" class="overlay-layer overlay-hidden fixed inset-0 z-30 flex items-center justify-center p-5 bg-[radial-gradient(circle_at_center,rgba(36,14,22,0.72),rgba(11,5,8,0.95))] overflow-y-auto">
+    <div class="glass-card ring-aura w-full max-w-md rounded-3xl p-7 sm:p-8 text-center my-auto">
+      <p class="uppercase tracking-[0.28em] text-[11px] text-[#e6b87d] mb-2">All 25 Constellations Complete</p>
+      <h2 class="font-serif-editorial text-3xl sm:text-4xl text-[#fff5ef] mb-3">The Promise</h2>
+      <div class="w-16 h-px bg-gradient-to-r from-transparent via-[#e6b87d] to-transparent mx-auto mb-5"></div>
+
+      <div class="space-y-3 text-left text-sm mb-5">
+        <div class="flex justify-between items-baseline border-b border-[#e6b87d]/15 pb-2 gap-3">
+          <span class="uppercase tracking-[0.16em] text-[10px] text-[#e6b87d]/75 shrink-0">Date</span>
+          <span class="font-medium text-[#fff5ef] text-right">Sunday, November 15, 2026</span>
+        </div>
+        <div class="flex justify-between items-baseline border-b border-[#e6b87d]/15 pb-2 gap-3">
+          <span class="uppercase tracking-[0.16em] text-[10px] text-[#e6b87d]/75 shrink-0">Time</span>
+          <span class="font-medium text-[#fff5ef] text-right">3:00 PM</span>
+        </div>
+        <div class="flex justify-between items-baseline border-b border-[#e6b87d]/15 pb-2 gap-3">
+          <span class="uppercase tracking-[0.16em] text-[10px] text-[#e6b87d]/75 shrink-0">Location</span>
+          <span class="font-medium text-[#fff5ef] text-right">Thabolenkosi's Place</span>
+        </div>
+        <div class="flex justify-between items-baseline border-b border-[#e6b87d]/15 pb-2 gap-3">
+          <span class="uppercase tracking-[0.16em] text-[10px] text-[#e6b87d]/75 shrink-0">Dress</span>
+          <span class="font-medium text-[#fff5ef] text-right">Afternoon Elegance</span>
+        </div>
+      </div>
+
+      <p class="font-serif-editorial italic text-base sm:text-lg text-[#f7ece6]/85 leading-relaxed mb-6">
+        “Every thread you wove led to this moment. Meet me at Thabolenkosi's Place for quiet music, warm company, and a promise I want to place in your hands.”
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <button id="countdown-btn" type="button" class="gold-gradient-btn flex-1 py-3 rounded-full text-xs font-semibold uppercase tracking-[0.18em]">
+          Countdown
+        </button>
+        <button id="invite-home-btn" type="button" class="flex-1 py-3 rounded-full border border-[#e6b87d]/30 text-[#e6b87d] text-xs uppercase tracking-[0.18em] hover:bg-[#e6b87d]/10 transition">
+          Return Home
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCREEN 6: Live Event Countdown Screen -->
+  <section id="countdown-screen" class="overlay-layer overlay-hidden fixed inset-0 z-30 flex items-center justify-center p-5 bg-[radial-gradient(circle_at_center,rgba(36,14,22,0.72),rgba(11,5,8,0.95))] overflow-y-auto">
+    <div class="glass-card ring-aura w-full max-w-md rounded-3xl p-7 sm:p-8 text-center my-auto">
+      <p id="cd-status-label" class="uppercase tracking-[0.28em] text-[11px] text-[#e6b87d] mb-2">Counting Every Moment</p>
+      <h2 class="font-serif-editorial text-3xl sm:text-4xl text-[#fff5ef] mb-2">Until Our Promise</h2>
+      <p class="text-xs text-[#f7ece6]/70 tracking-wide mb-5">
+        Sunday, November 15, 2026 • 3:00 PM
+      </p>
+      <div class="w-16 h-px bg-gradient-to-r from-transparent via-[#e6b87d] to-transparent mx-auto mb-6"></div>
+
+      <!-- 4-Unit Live Countdown Grid -->
+      <div class="grid grid-cols-4 gap-2 sm:gap-3 mb-6">
+        <div class="rounded-2xl bg-[#14080e]/90 border border-[#e6b87d]/25 py-3.5 px-2">
+          <span id="cd-days" class="block font-serif-editorial text-2xl sm:text-3xl text-[#fff5ef] font-semibold">00</span>
+          <span class="block text-[9px] uppercase tracking-[0.2em] text-[#e6b87d]/80 mt-1">Days</span>
+        </div>
+        <div class="rounded-2xl bg-[#14080e]/90 border border-[#e6b87d]/25 py-3.5 px-2">
+          <span id="cd-hours" class="block font-serif-editorial text-2xl sm:text-3xl text-[#fff5ef] font-semibold">00</span>
+          <span class="block text-[9px] uppercase tracking-[0.2em] text-[#e6b87d]/80 mt-1">Hours</span>
+        </div>
+        <div class="rounded-2xl bg-[#14080e]/90 border border-[#e6b87d]/25 py-3.5 px-2">
+          <span id="cd-minutes" class="block font-serif-editorial text-2xl sm:text-3xl text-[#fff5ef] font-semibold">00</span>
+          <span class="block text-[9px] uppercase tracking-[0.2em] text-[#e6b87d]/80 mt-1">Mins</span>
+        </div>
+        <div class="rounded-2xl bg-[#14080e]/90 border border-[#e6b87d]/25 py-3.5 px-2">
+          <span id="cd-seconds" class="block font-serif-editorial text-2xl sm:text-3xl text-[#e6b87d] font-semibold">00</span>
+          <span class="block text-[9px] uppercase tracking-[0.2em] text-[#e6b87d]/80 mt-1">Secs</span>
+        </div>
+      </div>
+
+      <p class="font-serif-editorial italic text-base text-[#f7ece6]/80 leading-relaxed mb-6">
+        “Thabolenkosi's Place • Afternoon Elegance”
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <button id="countdown-back-invite-btn" type="button" class="gold-gradient-btn flex-1 py-3 rounded-full text-xs font-semibold uppercase tracking-[0.18em]">
+          View Invitation
+        </button>
+        <button id="countdown-home-btn" type="button" class="flex-1 py-3 rounded-full border border-[#e6b87d]/30 text-[#e6b87d] text-xs uppercase tracking-[0.18em] hover:bg-[#e6b87d]/10 transition">
+          Return Home
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    /* ==========================================================================
+       1. DOM REFERENCES & CANVAS SETUP
+       ========================================================================== */
+    const canvas = document.getElementById('scene');
+    const ctx = canvas.getContext('2d');
+
+    const hud = document.getElementById('hud');
+    const homeBtn = document.getElementById('home-btn');
+    const hudMeters = document.getElementById('hud-meters');
+    const hudAmbientLabel = document.getElementById('hud-ambient-label');
+    const hudLevelBadge = document.getElementById('hud-level-badge');
+    const hudEmberCount = document.getElementById('hud-ember-count');
+    const progressBar = document.getElementById('progress-bar');
+    const warmthBar = document.getElementById('warmth-bar');
+
+    const audioBtn = document.getElementById('audio-btn');
+    const audioDot = document.getElementById('audio-dot');
+    const trackLabel = document.getElementById('track-label');
+
+    // Auth Screen Elements
+    const authScreen = document.getElementById('auth-screen');
+    const tabSignin = document.getElementById('tab-signin');
+    const tabCreate = document.getElementById('tab-create');
+    const authForm = document.getElementById('auth-form');
+    const authUsername = document.getElementById('auth-username');
+    const authPin = document.getElementById('auth-pin');
+    const authError = document.getElementById('auth-error');
+    const authSubmitBtn = document.getElementById('auth-submit-btn');
+    const quickContinueBtn = document.getElementById('quick-continue-btn');
+
+    // Home Screen Elements
+    const introScreen = document.getElementById('intro-screen');
+    const homeWelcomeUser = document.getElementById('home-welcome-user');
+    const switchUserBtn = document.getElementById('switch-user-btn');
+    const homeBestBadge = document.getElementById('home-best-badge');
+    const homeTierDesc = document.getElementById('home-tier-desc');
+    const prevLevelBtn = document.getElementById('prev-level-btn');
+    const nextLevelBtn = document.getElementById('next-level-btn');
+    const selectedLevelLabel = document.getElementById('selected-level-label');
+    const selectedLevelMeta = document.getElementById('selected-level-meta');
+    const startBtn = document.getElementById('start-btn');
+    const ambientBtn = document.getElementById('ambient-btn');
+    const viewInviteShortcut = document.getElementById('view-invite-shortcut');
+
+    // Home Soundtrack Controls
+    const prevTrackBtn = document.getElementById('prev-track-btn');
+    const homeAudioBtn = document.getElementById('home-audio-btn');
+    const homeAudioDot = document.getElementById('home-audio-dot');
+    const homeTrackLabel = document.getElementById('home-track-label');
+    const nextTrackBtn = document.getElementById('next-track-btn');
+    const togglePlaylistBtn = document.getElementById('toggle-playlist-btn');
+    const playlistToggleText = document.getElementById('playlist-toggle-text');
+    const playlistChevron = document.getElementById('playlist-chevron');
+    const trackListDrawer = document.getElementById('track-list-drawer');
+    const trackListItems = document.getElementById('track-list-items');
+    const addMusicBtn = document.getElementById('add-music-btn');
+    const customAudioInput = document.getElementById('custom-audio-input');
+
+    // Level Up / Fail / Invite Screens
+    const levelupScreen = document.getElementById('levelup-screen');
+    const levelupTierInfo = document.getElementById('levelup-tier-info');
+    const levelupTitle = document.getElementById('levelup-title');
+    const levelupSubtitle = document.getElementById('levelup-subtitle');
+    const nextLevelBtnModal = document.getElementById('next-level-btn-modal');
+    const levelupHomeBtn = document.getElementById('levelup-home-btn');
+
+    const failScreen = document.getElementById('fail-screen');
+    const failTierTag = document.getElementById('fail-tier-tag');
+    const failReason = document.getElementById('fail-reason');
+    const failStats = document.getElementById('fail-stats');
+    const retryBtn = document.getElementById('retry-btn');
+    const failHomeBtn = document.getElementById('fail-home-btn');
+
+    const inviteScreen = document.getElementById('invite-screen');
+    const countdownBtn = document.getElementById('countdown-btn');
+    const inviteHomeBtn = document.getElementById('invite-home-btn');
+
+    const countdownScreen = document.getElementById('countdown-screen');
+    const cdStatusLabel = document.getElementById('cd-status-label');
+    const cdDays = document.getElementById('cd-days');
+    const cdHours = document.getElementById('cd-hours');
+    const cdMinutes = document.getElementById('cd-minutes');
+    const cdSeconds = document.getElementById('cd-seconds');
+    const countdownBackInviteBtn = document.getElementById('countdown-back-invite-btn');
+    const countdownHomeBtn = document.getElementById('countdown-home-btn');
+
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    /* ==========================================================================
+       2. MULTI-INSTRUMENT NEO-SOUL ENGINE (15 Distinct Tracks + Device MP3 Import)
+       ========================================================================== */
+    let audioCtx = null;
+    let masterGain = null;
+    let noiseBuffer = null;
+    let isMuted = false;
+    let playlistStarted = false;
+    let stepTimer = null;
+    let currentTrackIdx = 0;
+    let barIndex = 0;
+    let stepInBar = 0;
+    let visualPulse = 0.25;
+
+    const customAudioEl = new Audio();
+    customAudioEl.preload = 'auto';
+    let currentCustomObjectUrl = null;
+    let customTracks = [];
+
+    const BUILTIN_TRACKS = [
+      {
+        title: 'I. Velvet Midnight',
+        styleLabel: 'Rhodes & Sub',
+        style: 'rhodes-groove',
+        barMs: 3200,
+        filterHz: 880,
+        drums: 'soft-pulse',
+        verseChords: [
+          [174.61, 220.00, 261.63, 329.63, 392.00], // Fmaj9
+          [164.81, 196.00, 246.94, 293.66, 392.00], // Em7
+          [146.83, 174.61, 220.00, 261.63, 329.63], // Dm9
+          [130.81, 196.00, 246.94, 293.66, 329.63]  // Cmaj9
+        ],
+        bridgeChords: [
+          [220.00, 261.63, 329.63, 392.00, 493.88], // Am9
+          [146.83, 220.00, 261.63, 329.63, 349.23], // Dm11
+          [196.00, 246.94, 293.66, 349.23, 440.00], // G13
+          [130.81, 164.81, 246.94, 293.66, 392.00]  // Cmaj9
+        ]
+      },
+      {
+        title: 'II. Slow Rain on Glass',
+        styleLabel: 'Rain & Piano',
+        style: 'rain-piano',
+        barMs: 3500,
+        filterHz: 760,
+        drums: 'rain-only',
+        verseChords: [
+          [155.56, 196.00, 233.08, 293.66, 349.23],
+          [130.81, 155.56, 196.00, 233.08, 293.66],
+          [174.61, 207.65, 261.63, 311.13, 392.00],
+          [116.54, 174.61, 207.65, 261.63, 349.23]
+        ],
+        bridgeChords: [
+          [207.65, 261.63, 311.13, 392.00, 466.16],
+          [196.00, 233.08, 293.66, 349.23, 440.00],
+          [174.61, 207.65, 261.63, 311.13, 392.00],
+          [116.54, 174.61, 233.08, 293.66, 392.00]
+        ]
+      },
+      {
+        title: 'III. Golden Hour',
+        styleLabel: 'Lo-Fi Soul Beat',
+        style: 'lofi-beat',
+        barMs: 2950,
+        filterHz: 940,
+        drums: 'lofi-kit',
+        verseChords: [
+          [220.00, 261.63, 329.63, 392.00, 493.88],
+          [174.61, 220.00, 261.63, 329.63, 392.00],
+          [130.81, 164.81, 196.00, 246.94, 293.66],
+          [196.00, 246.94, 293.66, 349.23, 440.00]
+        ],
+        bridgeChords: [
+          [146.83, 174.61, 220.00, 261.63, 329.63],
+          [164.81, 196.00, 246.94, 293.66, 392.00],
+          [174.61, 220.00, 246.94, 329.63, 392.00],
+          [164.81, 207.65, 246.94, 293.66, 349.23]
+        ]
+      },
+      {
+        title: 'IV. Midnight Harp',
+        styleLabel: 'Celestial Harp',
+        style: 'harp-arpeggio',
+        barMs: 3400,
+        filterHz: 1100,
+        drums: 'none',
+        verseChords: [
+          [196.00, 246.94, 293.66, 369.99, 440.00],
+          [164.81, 196.00, 246.94, 293.66, 369.99],
+          [130.81, 164.81, 196.00, 246.94, 293.66],
+          [146.83, 196.00, 220.00, 261.63, 329.63]
+        ],
+        bridgeChords: [
+          [123.47, 185.00, 220.00, 277.18, 329.63],
+          [164.81, 246.94, 293.66, 369.99, 392.00],
+          [220.00, 261.63, 329.63, 392.00, 493.88],
+          [146.83, 185.00, 261.63, 329.63, 392.00]
+        ]
+      },
+      {
+        title: 'V. Silk & Candlelight',
+        styleLabel: 'Flugelhorn Lead',
+        style: 'velvet-lead',
+        barMs: 3300,
+        filterHz: 820,
+        drums: 'soft-pulse',
+        verseChords: [
+          [138.59, 174.61, 207.65, 261.63, 311.13],
+          [116.54, 138.59, 174.61, 207.65, 261.63],
+          [155.56, 185.00, 233.08, 277.18, 349.23],
+          [207.65, 261.63, 311.13, 369.99, 466.16]
+        ],
+        bridgeChords: [
+          [174.61, 207.65, 261.63, 311.13, 392.00],
+          [116.54, 174.61, 207.65, 261.63, 277.18],
+          [185.00, 233.08, 277.18, 349.23, 415.30],
+          [207.65, 261.63, 311.13, 369.99, 440.00]
+        ]
+      },
+      {
+        title: 'VI. Crimson Horizon',
+        styleLabel: 'Deep Neo-Soul',
+        style: 'lofi-beat',
+        barMs: 3050,
+        filterHz: 860,
+        drums: 'lofi-kit',
+        verseChords: [
+          [185.00, 220.00, 277.18, 329.63, 415.30],
+          [146.83, 185.00, 220.00, 277.18, 329.63],
+          [220.00, 277.18, 329.63, 415.30, 493.88],
+          [164.81, 220.00, 246.94, 293.66, 369.99]
+        ],
+        bridgeChords: [
+          [123.47, 185.00, 220.00, 277.18, 329.63],
+          [138.59, 164.81, 207.65, 246.94, 329.63],
+          [146.83, 220.00, 277.18, 329.63, 369.99],
+          [138.59, 174.61, 246.94, 311.13, 329.63]
+        ]
+      },
+      {
+        title: 'VII. Quiet Promise',
+        styleLabel: 'Intimate Piano',
+        style: 'rain-piano',
+        barMs: 3450,
+        filterHz: 780,
+        drums: 'none',
+        verseChords: [
+          [146.83, 220.00, 261.63, 329.63, 349.23],
+          [196.00, 246.94, 293.66, 349.23, 440.00],
+          [164.81, 246.94, 293.66, 392.00, 493.88],
+          [220.00, 261.63, 329.63, 392.00, 440.00]
+        ],
+        bridgeChords: [
+          [123.47, 174.61, 220.00, 293.66, 349.23],
+          [164.81, 207.65, 293.66, 329.63, 392.00],
+          [220.00, 261.63, 329.63, 392.00, 493.88],
+          [220.00, 277.18, 329.63, 392.00, 440.00]
+        ]
+      },
+      {
+        title: 'VIII. Closer Still',
+        styleLabel: 'Warm Electric',
+        style: 'rhodes-groove',
+        barMs: 2900,
+        filterHz: 960,
+        drums: 'lofi-kit',
+        verseChords: [
+          [130.81, 155.56, 196.00, 233.08, 293.66],
+          [207.65, 261.63, 311.13, 392.00, 466.16],
+          [155.56, 196.00, 233.08, 293.66, 349.23],
+          [116.54, 174.61, 207.65, 261.63, 349.23]
+        ],
+        bridgeChords: [
+          [174.61, 207.65, 261.63, 311.13, 392.00],
+          [196.00, 233.08, 293.66, 349.23, 392.00],
+          [207.65, 261.63, 311.13, 392.00, 466.16],
+          [196.00, 246.94, 293.66, 349.23, 415.30]
+        ]
+      },
+      {
+        title: 'IX. Whispered Vows',
+        styleLabel: 'Harp & Flute',
+        style: 'harp-arpeggio',
+        barMs: 3500,
+        filterHz: 1020,
+        drums: 'rain-only',
+        verseChords: [
+          [116.54, 174.61, 220.00, 261.63, 349.23],
+          [220.00, 261.63, 329.63, 392.00, 440.00],
+          [196.00, 233.08, 293.66, 349.23, 440.00],
+          [174.61, 220.00, 261.63, 329.63, 392.00]
+        ],
+        bridgeChords: [
+          [155.56, 196.00, 233.08, 293.66, 349.23],
+          [146.83, 174.61, 220.00, 261.63, 349.23],
+          [130.81, 155.56, 196.00, 233.08, 293.66],
+          [174.61, 220.00, 261.63, 311.13, 392.00]
+        ]
+      },
+      {
+        title: 'X. Amber Pulse',
+        styleLabel: 'Late-Night Groove',
+        style: 'lofi-beat',
+        barMs: 2800,
+        filterHz: 920,
+        drums: 'lofi-kit',
+        verseChords: [
+          [164.81, 196.00, 246.94, 293.66, 369.99],
+          [130.81, 164.81, 196.00, 246.94, 293.66],
+          [196.00, 246.94, 293.66, 369.99, 440.00],
+          [146.83, 196.00, 220.00, 261.63, 329.63]
+        ],
+        bridgeChords: [
+          [220.00, 261.63, 329.63, 392.00, 493.88],
+          [123.47, 146.83, 185.00, 220.00, 293.66],
+          [130.81, 196.00, 246.94, 293.66, 329.63],
+          [123.47, 155.56, 220.00, 277.18, 293.66]
+        ]
+      },
+      {
+        title: 'XI. Moonlit Conservatory',
+        styleLabel: 'Velvet Brass',
+        style: 'velvet-lead',
+        barMs: 3350,
+        filterHz: 840,
+        drums: 'soft-pulse',
+        verseChords: [
+          [207.65, 261.63, 311.13, 392.00, 466.16],
+          [174.61, 207.65, 261.63, 311.13, 392.00],
+          [138.59, 174.61, 207.65, 261.63, 311.13],
+          [155.56, 207.65, 233.08, 277.18, 349.23]
+        ],
+        bridgeChords: [
+          [130.81, 155.56, 196.00, 233.08, 293.66],
+          [174.61, 207.65, 261.63, 311.13, 392.00],
+          [116.54, 138.59, 174.61, 207.65, 261.63],
+          [155.56, 196.00, 233.08, 277.18, 349.23]
+        ]
+      },
+      {
+        title: 'XII. Starlight Drift',
+        styleLabel: 'Weightless Harp',
+        style: 'harp-arpeggio',
+        barMs: 3600,
+        filterHz: 980,
+        drums: 'none',
+        verseChords: [
+          [146.83, 185.00, 220.00, 277.18, 329.63],
+          [123.47, 146.83, 185.00, 220.00, 293.66],
+          [196.00, 246.94, 293.66, 369.99, 440.00],
+          [164.81, 196.00, 246.94, 293.66, 369.99]
+        ],
+        bridgeChords: [
+          [185.00, 220.00, 277.18, 329.63, 415.30],
+          [123.47, 185.00, 220.00, 277.18, 329.63],
+          [164.81, 246.94, 293.66, 369.99, 392.00],
+          [220.00, 277.18, 329.63, 392.00, 493.88]
+        ]
+      },
+      {
+        title: 'XIII. Soft Silhouette',
+        styleLabel: 'Midnight Rhodes',
+        style: 'rhodes-groove',
+        barMs: 3100,
+        filterHz: 890,
+        drums: 'lofi-kit',
+        verseChords: [
+          [174.61, 207.65, 261.63, 311.13, 392.00],
+          [138.59, 174.61, 207.65, 261.63, 311.13],
+          [207.65, 261.63, 311.13, 392.00, 466.16],
+          [155.56, 196.00, 233.08, 293.66, 349.23]
+        ],
+        bridgeChords: [
+          [116.54, 138.59, 174.61, 207.65, 261.63],
+          [130.81, 155.56, 196.00, 233.08, 293.66],
+          [138.59, 174.61, 207.65, 261.63, 311.13],
+          [130.81, 164.81, 233.08, 277.18, 311.13]
+        ]
+      },
+      {
+        title: 'XIV. Unspoken',
+        styleLabel: 'Rain & Melody',
+        style: 'rain-piano',
+        barMs: 3400,
+        filterHz: 810,
+        drums: 'rain-only',
+        verseChords: [
+          [164.81, 207.65, 246.94, 311.13, 369.99],
+          [138.59, 164.81, 207.65, 246.94, 329.63],
+          [220.00, 277.18, 329.63, 415.30, 493.88],
+          [123.47, 185.00, 220.00, 277.18, 329.63]
+        ],
+        bridgeChords: [
+          [207.65, 246.94, 293.66, 369.99, 440.00],
+          [138.59, 207.65, 246.94, 311.13, 329.63],
+          [185.00, 220.00, 277.18, 329.63, 415.30],
+          [123.47, 185.00, 246.94, 311.13, 369.99]
+        ]
+      },
+      {
+        title: 'XV. Forever Begins',
+        styleLabel: 'Soulful Finale',
+        style: 'velvet-lead',
+        barMs: 3250,
+        filterHz: 950,
+        drums: 'soft-pulse',
+        verseChords: [
+          [130.81, 164.81, 196.00, 246.94, 293.66],
+          [220.00, 261.63, 329.63, 392.00, 493.88],
+          [174.61, 220.00, 261.63, 329.63, 392.00],
+          [196.00, 246.94, 293.66, 349.23, 440.00]
+        ],
+        bridgeChords: [
+          [164.81, 196.00, 246.94, 293.66, 369.99],
+          [220.00, 261.63, 329.63, 392.00, 440.00],
+          [146.83, 174.61, 220.00, 261.63, 329.63],
+          [196.00, 246.94, 293.66, 349.23, 440.00]
+        ]
+      }
+    ];
+
+    function getAllTracks() {
+      return [...BUILTIN_TRACKS, ...customTracks];
+    }
+
+    /* ==========================================================================
+       2B. OFFLINE CUSTOM AUDIO STORAGE (IndexedDB)
+       ========================================================================== */
+    const AUDIO_DB_NAME = 'promise_invite_audio_v1';
+    const AUDIO_STORE_NAME = 'custom_tracks';
+
+    function openAudioDB() {
+      return new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+          reject(new Error('IndexedDB unavailable'));
+          return;
+        }
+        const req = window.indexedDB.open(AUDIO_DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(AUDIO_STORE_NAME)) {
+            db.createObjectStore(AUDIO_STORE_NAME, { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function loadCustomTracksFromDB() {
+      try {
+        const db = await openAudioDB();
+        const records = await new Promise((resolve, reject) => {
+          const tx = db.transaction(AUDIO_STORE_NAME, 'readonly');
+          const req = tx.objectStore(AUDIO_STORE_NAME).getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+        customTracks = records.map((rec) => ({
+          id: rec.id,
+          title: rec.title,
+          styleLabel: 'Device Audio',
+          isCustom: true,
+          blob: rec.blob
+        }));
+        syncAudioLabels();
+      } catch {
+        // Ignore if IndexedDB is blocked in private mode
+      }
+    }
+
+    async function saveCustomAudioFiles(fileList) {
+      if (!fileList || !fileList.length) return;
+      const startIndex = getAllTracks().length;
+
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        const cleanTitle = file.name.replace(/\.[^/.]+$/, '').slice(0, 36) || `Custom Song ${i + 1}`;
+        const record = {
+          id: `custom_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+          title: cleanTitle,
+          blob: file
+        };
+
+        customTracks.push({
+          id: record.id,
+          title: record.title,
+          styleLabel: 'Device Audio',
+          isCustom: true,
+          blob: record.blob
+        });
+
+        try {
+          const db = await openAudioDB();
+          await new Promise((resolve, reject) => {
+            const tx = db.transaction(AUDIO_STORE_NAME, 'readwrite');
+            const req = tx.objectStore(AUDIO_STORE_NAME).put(record);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+          });
+        } catch {
+          // Remains in memory for current session
+        }
+      }
+
+      selectTrack(startIndex);
+    }
+
+    async function removeCustomTrack(trackId, globalIdx) {
+      customTracks = customTracks.filter((t) => t.id !== trackId);
+      try {
+        const db = await openAudioDB();
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(AUDIO_STORE_NAME, 'readwrite');
+          const req = tx.objectStore(AUDIO_STORE_NAME).delete(trackId);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      } catch {
+        // Ignore storage error
+      }
+
+      const tracks = getAllTracks();
+      if (currentTrackIdx >= tracks.length) {
+        currentTrackIdx = 0;
+      }
+      if (globalIdx === currentTrackIdx && playlistStarted) {
+        selectTrack(currentTrackIdx);
+      } else {
+        syncAudioLabels();
+      }
+    }
+
+    function renderTrackListDrawer() {
+      if (!trackListItems) return;
+      trackListItems.innerHTML = '';
+      const tracks = getAllTracks();
+
+      tracks.forEach((tr, idx) => {
+        const isCurrent = idx === currentTrackIdx;
+        const row = document.createElement('div');
+        row.className = isCurrent
+          ? 'w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[#e6b87d]/20 text-[#fff6f0] text-xs transition'
+          : 'w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl hover:bg-white/5 text-[#f7ece6]/70 text-xs transition';
+
+        const selectBtn = document.createElement('button');
+        selectBtn.type = 'button';
+        selectBtn.className = 'flex-1 flex items-center justify-between min-w-0 text-left';
+        selectBtn.innerHTML = `
+          <span class="truncate pr-2 ${isCurrent ? 'text-[#e6b87d] font-medium' : ''}">${tr.title}</span>
+          <span class="text-[10px] text-[#f7ece6]/45 shrink-0">${tr.styleLabel}</span>
+        `;
+        selectBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectTrack(idx);
+        });
+        row.appendChild(selectBtn);
+
+        if (tr.isCustom) {
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.ariaLabel = 'Remove Song';
+          delBtn.className = 'ml-2 px-1.5 py-0.5 rounded text-[#d9536f] hover:bg-[#d9536f]/20 text-xs shrink-0';
+          delBtn.textContent = '×';
+          delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeCustomTrack(tr.id, idx);
+          });
+          row.appendChild(delBtn);
+        }
+
+        trackListItems.appendChild(row);
+      });
+    }
+
+    function syncAudioLabels() {
+      const tracks = getAllTracks();
+      if (currentTrackIdx >= tracks.length) currentTrackIdx = 0;
+      const currentTrack = tracks[currentTrackIdx];
+      const currentName = currentTrack.title;
+      const trackCounter = `${String(currentTrackIdx + 1).padStart(2, '0')}/${tracks.length}`;
+      trackLabel.textContent = currentName;
+
+      if (trackListDrawer.classList.contains('hidden')) {
+        playlistToggleText.textContent = `Browse ${tracks.length} Tracks & Add Songs`;
+      }
+
+      if (!playlistStarted || isMuted) {
+        audioDot.classList.remove('animate-pulse');
+        audioDot.style.opacity = '0.35';
+        homeAudioDot.classList.remove('animate-pulse');
+        homeAudioDot.style.backgroundColor = 'rgba(230, 184, 125, 0.35)';
+        homeTrackLabel.textContent = playlistStarted
+          ? `${trackCounter} • ${currentName} (Paused)`
+          : `Play • ${currentName}`;
+      } else {
+        audioDot.classList.add('animate-pulse');
+        audioDot.style.opacity = '1';
+        homeAudioDot.classList.add('animate-pulse');
+        homeAudioDot.style.backgroundColor = '#e6b87d';
+        homeTrackLabel.textContent = `${trackCounter} • ${currentName}`;
+      }
+
+      renderTrackListDrawer();
+    }
+
+    function ensureNoiseBuffer() {
+      if (!audioCtx || noiseBuffer) return;
+      const length = audioCtx.sampleRate * 2;
+      noiseBuffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < length; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+    }
+
+    function stopAllAudioSources() {
+      if (stepTimer) {
+        clearTimeout(stepTimer);
+        stepTimer = null;
+      }
+      if (!customAudioEl.paused) {
+        customAudioEl.pause();
+      }
+    }
+
+    customAudioEl.addEventListener('ended', () => {
+      skipTrack(1);
+    });
+
+    function initAmbientSynth() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.setValueAtTime(0.32, audioCtx.currentTime);
+        masterGain.connect(audioCtx.destination);
+        ensureNoiseBuffer();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      if (!playlistStarted) {
+        playlistStarted = true;
+        isMuted = false;
+        startActiveTrack();
+      }
+      syncAudioLabels();
+    }
+
+    function playBassVoice(rootFreq, durationSec, octaveJump = false) {
+      if (!audioCtx || isMuted || !Number.isFinite(rootFreq)) return;
+      const now = audioCtx.currentTime;
+      const freq = Math.max(45, octaveJump ? rootFreq : rootFreq * 0.5);
+
+      const osc = audioCtx.createOscillator();
+      const filter = audioCtx.createBiquadFilter();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+      if (octaveJump) {
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.5, now + durationSec * 0.65);
+      }
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(240, now);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(now);
+      osc.stop(now + durationSec + 0.04);
+    }
+
+    function playRhodesNote(freq, durationSec, peakGain = 0.055, filterHz = 900) {
+      if (!audioCtx || isMuted || !Number.isFinite(freq)) return;
+      const now = audioCtx.currentTime;
+
+      const osc1 = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      const filter = audioCtx.createBiquadFilter();
+      const gain = audioCtx.createGain();
+
+      osc1.type = 'triangle';
+      osc1.frequency.setValueAtTime(freq, now);
+
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(freq * 2, now);
+
+      const bellGain = audioCtx.createGain();
+      bellGain.gain.setValueAtTime(0.22, now);
+      bellGain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(filterHz * 1.35, now);
+      filter.frequency.exponentialRampToValueAtTime(Math.max(320, filterHz * 0.65), now + durationSec);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(peakGain, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
+
+      osc1.connect(filter);
+      osc2.connect(bellGain);
+      bellGain.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + durationSec + 0.05);
+      osc2.stop(now + durationSec + 0.05);
+    }
+
+    function playVelvetLead(freq, durationSec, peakGain = 0.048) {
+      if (!audioCtx || isMuted || !Number.isFinite(freq)) return;
+      const now = audioCtx.currentTime;
+
+      const osc = audioCtx.createOscillator();
+      const vibrato = audioCtx.createOscillator();
+      const vibratoGain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq * 0.985, now);
+      osc.frequency.exponentialRampToValueAtTime(freq, now + 0.14);
+
+      vibrato.type = 'sine';
+      vibrato.frequency.setValueAtTime(5.2, now);
+      vibratoGain.gain.setValueAtTime(2.8, now);
+      vibrato.connect(vibratoGain);
+      vibratoGain.connect(osc.frequency);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(780, now);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(peakGain, now + 0.18);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(now);
+      vibrato.start(now);
+      osc.stop(now + durationSec + 0.05);
+      vibrato.stop(now + durationSec + 0.05);
+    }
+
+    function playSoftKick() {
+      if (!audioCtx || isMuted) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(102, now);
+      osc.frequency.exponentialRampToValueAtTime(42, now + 0.16);
+
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start(now);
+      osc.stop(now + 0.24);
+      visualPulse = Math.max(visualPulse, 0.78);
+    }
+
+    function playBrushRim() {
+      if (!audioCtx || isMuted || !noiseBuffer) return;
+      const now = audioCtx.currentTime;
+      const src = audioCtx.createBufferSource();
+      src.buffer = noiseBuffer;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1450, now);
+      filter.Q.setValueAtTime(1.8, now);
+
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.045, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+      src.start(now);
+      src.stop(now + 0.09);
+    }
+
+    function playSoftHat(isRain = false) {
+      if (!audioCtx || isMuted || !noiseBuffer) return;
+      const now = audioCtx.currentTime;
+      const src = audioCtx.createBufferSource();
+      src.buffer = noiseBuffer;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = isRain ? 'bandpass' : 'highpass';
+      filter.frequency.setValueAtTime(isRain ? 2200 : 6400, now);
+
+      const dur = isRain ? 0.45 : 0.04;
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(isRain ? 0.012 : 0.016, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+      src.start(now);
+      src.stop(now + dur + 0.02);
+    }
+
+    function playChord(freqs, durationSec) {
+      if (!audioCtx || isMuted || !Array.isArray(freqs)) return;
+      visualPulse = 0.85;
+      freqs.forEach((f, idx) => {
+        playRhodesNote(f, durationSec, idx === 0 ? 0.08 : 0.045, 920);
+      });
+    }
+
+    function playChimeNote() {
+      if (!audioCtx || isMuted) return;
+      const now = audioCtx.currentTime;
+      const notes = [523.25, 587.33, 659.25, 783.99, 880.00, 987.77];
+      const safeIndex = Math.floor(Math.max(0, score)) % notes.length;
+      const freq = notes[safeIndex];
+      if (!Number.isFinite(freq)) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(0.14, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.1);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start(now);
+      osc.stop(now + 1.15);
+    }
+
+    function playSnapSound() {
+      if (!audioCtx || isMuted) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(190, now);
+      osc.frequency.exponentialRampToValueAtTime(52, now + 0.45);
+
+      gain.gain.setValueAtTime(0.16, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    }
+
+    function scheduleMusicalStep(track) {
+      const stepSec = (track.barMs / 8) / 1000;
+      const barSec = track.barMs / 1000;
+
+      const isBridge = barIndex >= 16 && barIndex < 24;
+      const isVerseB = barIndex >= 8 && barIndex < 16;
+      const isFinale = barIndex >= 24;
+      const progression = isBridge ? track.bridgeChords : track.verseChords;
+      const chord = progression[barIndex % progression.length];
+      const root = chord[0];
+
+      if (stepInBar === 0) {
+        playBassVoice(root, barSec * 0.62, false);
+        visualPulse = 0.85;
+      } else if (stepInBar === 5 && (isVerseB || isBridge || isFinale)) {
+        playBassVoice(chord[1] || root * 1.5, stepSec * 2.6, barIndex % 2 === 1);
+      }
+
+      if (track.style === 'harp-arpeggio') {
+        const arpOrder = [0, 1, 2, 3, 4, 3, 2, 1];
+        const noteFreq = chord[arpOrder[stepInBar] % chord.length];
+        const octaveLift = stepInBar >= 3 && stepInBar <= 5 ? 2 : 1;
+        playRhodesNote(noteFreq * octaveLift, stepSec * 3.4, 0.044, track.filterHz);
+      } else if (track.style === 'rain-piano') {
+        if (stepInBar === 0) {
+          playRhodesNote(chord[0], barSec * 0.85, 0.055, track.filterHz);
+          playRhodesNote(chord[2], barSec * 0.85, 0.045, track.filterHz);
+        } else if (stepInBar === 1 || stepInBar === 4) {
+          playRhodesNote(chord[3], barSec * 0.55, 0.042, track.filterHz);
+          playRhodesNote(chord[4], barSec * 0.55, 0.042, track.filterHz);
+        }
+      } else if (track.style === 'rhodes-groove' || track.style === 'lofi-beat') {
+        if (stepInBar === 0) {
+          chord.slice(1).forEach((f) => playRhodesNote(f, stepSec * 3.2, 0.042, track.filterHz));
+        } else if (stepInBar === 3 && (barIndex % 2 === 0 || isBridge)) {
+          chord.slice(1).forEach((f) => playRhodesNote(f, stepSec * 4.5, 0.036, track.filterHz));
+        }
+      } else {
+        if (stepInBar === 0) {
+          chord.slice(1).forEach((f) => playRhodesNote(f, barSec * 0.92, 0.04, track.filterHz));
+        }
+      }
+
+      if ((isVerseB || isBridge || isFinale) && track.style !== 'harp-arpeggio') {
+        const melodyPatterns = [
+          { 2: 4, 4: 3, 6: 2 },
+          { 1: 2, 3: 3, 5: 4, 7: 3 },
+          { 0: 4, 3: 4, 5: 3 },
+          { 2: 3, 4: 2, 6: 1 }
+        ];
+        const pat = melodyPatterns[(barIndex + (isBridge ? 1 : 0)) % melodyPatterns.length];
+        if (pat[stepInBar] !== undefined) {
+          const degreeIdx = pat[stepInBar];
+          const baseFreq = chord[degreeIdx % chord.length];
+          const melodyFreq = isBridge ? baseFreq * 2 : baseFreq;
+          playVelvetLead(melodyFreq, stepSec * 3.1, track.style === 'velvet-lead' ? 0.056 : 0.042);
+        }
+      }
+
+      if (barIndex >= 4 || track.drums === 'rain-only') {
+        if (track.drums === 'lofi-kit') {
+          if (stepInBar === 0 || stepInBar === 5) playSoftKick();
+          if (stepInBar === 2 || stepInBar === 6) playBrushRim();
+          if (stepInBar % 2 === 1) playSoftHat(false);
+        } else if (track.drums === 'soft-pulse') {
+          if (stepInBar === 0 || stepInBar === 5) playSoftKick();
+          if (stepInBar === 6 && isBridge) playBrushRim();
+        } else if (track.drums === 'rain-only') {
+          if (stepInBar === 0 || stepInBar === 4) playSoftHat(true);
+        }
+      }
+    }
+
+    function startActiveTrack() {
+      stopAllAudioSources();
+      const tracks = getAllTracks();
+      if (!tracks.length) return;
+      if (currentTrackIdx >= tracks.length) currentTrackIdx = 0;
+
+      const track = tracks[currentTrackIdx];
+      syncAudioLabels();
+
+      if (track.isCustom && track.blob) {
+        if (currentCustomObjectUrl) {
+          URL.revokeObjectURL(currentCustomObjectUrl);
+        }
+        currentCustomObjectUrl = URL.createObjectURL(track.blob);
+        customAudioEl.src = currentCustomObjectUrl;
+        customAudioEl.muted = isMuted;
+        customAudioEl.play().catch(() => {});
+        return;
+      }
+
+      barIndex = 0;
+      stepInBar = 0;
+
+      const runStep = () => {
+        const active = getAllTracks()[currentTrackIdx];
+        if (!active || active.isCustom) return;
+
+        scheduleMusicalStep(active);
+
+        stepInBar++;
+        if (stepInBar >= 8) {
+          stepInBar = 0;
+          barIndex++;
+          if (barIndex >= 32) {
+            barIndex = 0;
+            currentTrackIdx = (currentTrackIdx + 1) % getAllTracks().length;
+            startActiveTrack();
+            return;
+          }
+        }
+
+        stepTimer = setTimeout(runStep, active.barMs / 8);
+      };
+
+      runStep();
+    }
+
+    function selectTrack(index) {
+      initAmbientSynth();
+      const tracks = getAllTracks();
+      if (isMuted) {
+        isMuted = false;
+        if (masterGain && audioCtx) {
+          masterGain.gain.setValueAtTime(0.32, audioCtx.currentTime);
+        }
+        customAudioEl.muted = false;
+      }
+      currentTrackIdx = ((index % tracks.length) + tracks.length) % tracks.length;
+      startActiveTrack();
+    }
+
+    function skipTrack(delta) {
+      selectTrack(currentTrackIdx + delta);
+    }
+
+    function toggleAudioPlayback() {
+      if (!playlistStarted) {
+        initAmbientSynth();
+        return;
+      }
+      isMuted = !isMuted;
+      if (masterGain && audioCtx) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        masterGain.gain.setValueAtTime(isMuted ? 0.0001 : 0.32, audioCtx.currentTime);
+      }
+      const activeTrack = getAllTracks()[currentTrackIdx];
+      if (activeTrack && activeTrack.isCustom) {
+        customAudioEl.muted = isMuted;
+        if (isMuted) customAudioEl.pause();
+        else customAudioEl.play().catch(() => {});
+      }
+      syncAudioLabels();
+    }
+
+    audioBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleAudioPlayback();
+    });
+
+    homeAudioBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleAudioPlayback();
+    });
+
+    prevTrackBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      skipTrack(-1);
+    });
+
+    nextTrackBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      skipTrack(1);
+    });
+
+    togglePlaylistBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isHidden = trackListDrawer.classList.contains('hidden');
+      const totalCount = getAllTracks().length;
+      if (isHidden) {
+        renderTrackListDrawer();
+        trackListDrawer.classList.remove('hidden');
+        playlistToggleText.textContent = 'Hide Tracklist';
+        playlistChevron.style.transform = 'rotate(180deg)';
+      } else {
+        trackListDrawer.classList.add('hidden');
+        playlistToggleText.textContent = `Browse ${totalCount} Tracks & Add Songs`;
+        playlistChevron.style.transform = 'rotate(0deg)';
+      }
+    });
+
+    addMusicBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      customAudioInput.click();
+    });
+
+    customAudioInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length) {
+        saveCustomAudioFiles(e.target.files);
+        e.target.value = '';
+      }
+    });
+
+    function getBassEnergy() {
+      const activeTrack = getAllTracks()[currentTrackIdx];
+      if (activeTrack && activeTrack.isCustom && !isMuted && !customAudioEl.paused) {
+        return 0.42 + Math.sin(performance.now() * 0.006) * 0.22;
+      }
+      visualPulse *= 0.955;
+      return isMuted || !playlistStarted ? 0.14 : Math.max(0.16, visualPulse);
+    }
+
+    /* ==========================================================================
+       3. LOCAL PROFILE & 25-LEVEL PROGRESSION STORAGE (IndexedDB + Memory Fallback)
+       ========================================================================== */
+    const PROFILE_DB_NAME = 'promise_invite_profiles_v1';
+    const PROFILE_STORE_NAME = 'users';
+    const memoryProfiles = new Map();
+    let currentUser = null;
+    let authMode = 'signin';
+    let selectedLevel = 1;
+    const MAX_LEVELS = 25;
+
+    function openProfileDB() {
+      return new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+          reject(new Error('IndexedDB unavailable'));
+          return;
+        }
+        const req = window.indexedDB.open(PROFILE_DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(PROFILE_STORE_NAME)) {
+            db.createObjectStore(PROFILE_STORE_NAME, { keyPath: 'key' });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function getAllStoredProfiles() {
+      try {
+        const db = await openProfileDB();
+        const rows = await new Promise((resolve, reject) => {
+          const tx = db.transaction(PROFILE_STORE_NAME, 'readonly');
+          const req = tx.objectStore(PROFILE_STORE_NAME).getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+        rows.forEach((r) => memoryProfiles.set(r.key, r));
+        return rows;
+      } catch {
+        return Array.from(memoryProfiles.values());
+      }
+    }
+
+    async function getStoredProfile(key) {
+      if (memoryProfiles.has(key)) {
+        return memoryProfiles.get(key);
+      }
+      try {
+        const db = await openProfileDB();
+        const rec = await new Promise((resolve, reject) => {
+          const tx = db.transaction(PROFILE_STORE_NAME, 'readonly');
+          const req = tx.objectStore(PROFILE_STORE_NAME).get(key);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => reject(req.error);
+        });
+        if (rec) memoryProfiles.set(key, rec);
+        return rec;
+      } catch {
+        return null;
+      }
+    }
+
+    async function saveStoredProfile(profile) {
+      profile.updatedAt = Date.now();
+      memoryProfiles.set(profile.key, profile);
+      try {
+        const db = await openProfileDB();
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(PROFILE_STORE_NAME, 'readwrite');
+          const req = tx.objectStore(PROFILE_STORE_NAME).put(profile);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      } catch {
+        // Safe in-memory fallback
+      }
+    }
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      authError.classList.add('hidden');
+      if (mode === 'signin') {
+        tabSignin.className = 'py-2 rounded-xl text-xs uppercase tracking-[0.16em] font-medium bg-[#e6b87d]/20 text-[#fff5ef] transition';
+        tabCreate.className = 'py-2 rounded-xl text-xs uppercase tracking-[0.16em] font-medium text-[#f7ece6]/60 hover:text-[#f7ece6] transition';
+        authSubmitBtn.textContent = 'Sign In & Continue';
+      } else {
+        tabCreate.className = 'py-2 rounded-xl text-xs uppercase tracking-[0.16em] font-medium bg-[#e6b87d]/20 text-[#fff5ef] transition';
+        tabSignin.className = 'py-2 rounded-xl text-xs uppercase tracking-[0.16em] font-medium text-[#f7ece6]/60 hover:text-[#f7ece6] transition';
+        authSubmitBtn.textContent = 'Create Profile & Begin';
+      }
+    }
+
+    function showAuthError(msg) {
+      authError.textContent = msg;
+      authError.classList.remove('hidden');
+    }
+
+    tabSignin.addEventListener('click', () => setAuthMode('signin'));
+    tabCreate.addEventListener('click', () => setAuthMode('create'));
+
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      authError.classList.add('hidden');
+
+      const rawName = authUsername.value.trim();
+      const pin = authPin.value.trim();
+
+      if (rawName.length < 2) {
+        showAuthError('Please enter at least 2 characters for your name.');
+        return;
+      }
+      if (!/^\d{4}$/.test(pin)) {
+        showAuthError('Please enter a 4-digit numeric PIN.');
+        return;
+      }
+
+      const key = rawName.toLowerCase();
+      const existing = await getStoredProfile(key);
+
+      if (authMode === 'create') {
+        if (existing) {
+          showAuthError('A profile with that name already exists. Switch to Sign In.');
+          return;
+        }
+        const newProfile = {
+          key,
+          username: rawName,
+          pin,
+          highestUnlockedLevel: 1,
+          completedLevels: 0,
+          inviteUnlocked: false,
+          updatedAt: Date.now()
+        };
+        await saveStoredProfile(newProfile);
+        loginWithProfile(newProfile);
+      } else {
+        if (!existing) {
+          showAuthError('No profile found with that name. Tap "New Profile" to create yours.');
+          return;
+        }
+        if (existing.pin !== pin) {
+          showAuthError('Incorrect 4-digit PIN. Please try again.');
+          return;
+        }
+        loginWithProfile(existing);
+      }
+    });
+
+    async function checkSavedQuickProfile() {
+      const profiles = await getAllStoredProfiles();
+      if (profiles.length > 0) {
+        profiles.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        const latest = profiles[0];
+        quickContinueBtn.textContent = `Continue as ${latest.username} (Level ${latest.highestUnlockedLevel}/25)`;
+        quickContinueBtn.classList.remove('hidden');
+        quickContinueBtn.onclick = () => {
+          authUsername.value = latest.username;
+          authPin.focus();
+        };
+      }
+    }
+
+    function loginWithProfile(profile) {
+      currentUser = profile;
+      selectedLevel = Math.min(MAX_LEVELS, Math.max(1, profile.highestUnlockedLevel || 1));
+      initAmbientSynth();
+      showHomeScreen();
+    }
+
+    /* ==========================================================================
+       4. 25-LEVEL ESCALATING DIFFICULTY CONFIGURATION
+       ========================================================================== */
+    function getLevelConfig(lvl) {
+      const clamped = Math.max(1, Math.min(MAX_LEVELS, lvl));
+      let tierName = 'Tier I • Awakening';
+      let tierSubtitle = 'Steady hands. Guide the glowing ribbon through each ember without crossing your own trail.';
+
+      if (clamped >= 21) {
+        tierName = 'Tier V • The Promise';
+        tierSubtitle = 'Peak velocity, patrolling crimson thorns, and agile evasive embers stand between you and the ring.';
+      } else if (clamped >= 16) {
+        tierName = 'Tier IV • Crimson Veil';
+        tierSubtitle = 'Shadow thorns patrol faster and the golden sanctuary narrows. Keep your warmth alive.';
+      } else if (clamped >= 11) {
+        tierName = 'Tier III • Elusive Sparks';
+        tierSubtitle = 'Embers sense your ribbon and drift away if approached directly. Curve wide to catch them.';
+      } else if (clamped >= 6) {
+        tierName = 'Tier II • Magnetic Drift';
+        tierSubtitle = 'The ribbon glides faster and embers begin drifting across the dark velvet arena.';
+      }
+
+      const targetEmbers = 7 + Math.floor((clamped - 1) * 0.4); // 7 up to 16 embers
+      const thornCount = Math.min(10, 3 + Math.floor((clamped - 1) * 0.3)); // 3 up to 10 thorns
+      const speed = 2.35 + (clamped - 1) * 0.088; // 2.35 up to 4.46 px/frame
+      const turnRate = Math.max(0.058, 0.092 - (clamped - 1) * 0.0014);
+      const warmthDecay = 0.052 + (clamped - 1) * 0.0024; // Drains faster on higher levels
+      const emberDriftSpeed = clamped < 3 ? 0.15 : 0.35 + (clamped - 1) * 0.045;
+      const evadeStrength = clamped < 9 ? 0 : Math.min(1.65, (clamped - 8) * 0.095);
+      const arenaMargin = Math.min(48, 22 + Math.floor((clamped - 1) * 1.05));
+
+      return {
+        level: clamped,
+        tierName,
+        tierSubtitle,
+        targetEmbers,
+        thornCount,
+        speed,
+        turnRate,
+        warmthDecay,
+        emberDriftSpeed,
+        evadeStrength,
+        arenaMargin
+      };
+    }
+
+    function updateHomeLevelUI() {
+      if (!currentUser) return;
+      const maxUnlocked = Math.min(MAX_LEVELS, Math.max(1, currentUser.highestUnlockedLevel || 1));
+      selectedLevel = Math.max(1, Math.min(maxUnlocked, selectedLevel));
+
+      const cfg = getLevelConfig(selectedLevel);
+      homeWelcomeUser.textContent = `Welcome, ${currentUser.username}`;
+      homeBestBadge.textContent = currentUser.inviteUnlocked
+        ? '25 / 25 • Unlocked'
+        : `Level ${maxUnlocked} / ${MAX_LEVELS}`;
+
+      selectedLevelLabel.textContent = `Level ${cfg.level} • ${cfg.tierName.split('•')[1].trim()}`;
+      selectedLevelMeta.textContent = `${cfg.targetEmbers} Embers • ${cfg.thornCount} Shadow Thorns`;
+      homeTierDesc.textContent = cfg.tierSubtitle;
+      startBtn.textContent = `Begin Level ${cfg.level}`;
+
+      prevLevelBtn.disabled = selectedLevel <= 1;
+      nextLevelBtn.disabled = selectedLevel >= maxUnlocked;
+
+      if (currentUser.inviteUnlocked) {
+        viewInviteShortcut.classList.remove('hidden');
+      } else {
+        viewInviteShortcut.classList.add('hidden');
+      }
+    }
+
+    prevLevelBtn.addEventListener('click', () => {
+      if (selectedLevel > 1) {
+        selectedLevel--;
+        updateHomeLevelUI();
+      }
+    });
+
+    nextLevelBtn.addEventListener('click', () => {
+      const maxUnlocked = currentUser ? currentUser.highestUnlockedLevel : 1;
+      if (selectedLevel < maxUnlocked) {
+        selectedLevel++;
+        updateHomeLevelUI();
+      }
+    });
+
+    /* ==========================================================================
+       5. SCREEN NAVIGATION & HAPTICS
+       ========================================================================== */
+    function setOverlayVisibility(targetScreen) {
+      [authScreen, introScreen, levelupScreen, failScreen, inviteScreen, countdownScreen].forEach((el) => {
+        if (el === targetScreen) {
+          el.classList.remove('overlay-hidden');
+          el.classList.add('overlay-visible');
+        } else {
+          el.classList.remove('overlay-visible');
+          el.classList.add('overlay-hidden');
+        }
+      });
+    }
+
+    // Target Event Timestamp: Sunday, November 15, 2026 at 3:00 PM Local Time
+    const EVENT_TARGET_DATE = new Date(2026, 10, 15, 15, 0, 0).getTime();
+    let countdownInterval = null;
+
+    function updateCountdownDisplay() {
+      const now = Date.now();
+      const diff = EVENT_TARGET_DATE - now;
+
+      if (diff <= 0) {
+        cdStatusLabel.textContent = 'The Moment Has Arrived';
+        cdDays.textContent = '00';
+        cdHours.textContent = '00';
+        cdMinutes.textContent = '00';
+        cdSeconds.textContent = '00';
+        return;
+      }
+
+      const totalSec = Math.floor(diff / 1000);
+      const days = Math.floor(totalSec / 86400);
+      const hours = Math.floor((totalSec % 86400) / 3600);
+      const mins = Math.floor((totalSec % 3600) / 60);
+      const secs = totalSec % 60;
+
+      cdStatusLabel.textContent = 'Counting Every Moment';
+      cdDays.textContent = String(days).padStart(2, '0');
+      cdHours.textContent = String(hours).padStart(2, '0');
+      cdMinutes.textContent = String(mins).padStart(2, '0');
+      cdSeconds.textContent = String(secs).padStart(2, '0');
+    }
+
+    function openCountdownScreen() {
+      initAmbientSynth();
+      gameMode = 'countdown';
+      hud.classList.add('opacity-0', 'pointer-events-none');
+      updateCountdownDisplay();
+      if (!countdownInterval) {
+        countdownInterval = setInterval(updateCountdownDisplay, 1000);
+      }
+      setOverlayVisibility(countdownScreen);
+      if (!gameRunning) {
+        gameRunning = true;
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function pulseHeartbeat(pattern = 'soft') {
+      if (!navigator.vibrate) return;
+      if (pattern === 'win') {
+        navigator.vibrate([60, 75, 110, 80, 170]);
+      } else if (pattern === 'snap') {
+        navigator.vibrate([140, 60, 140]);
+      } else {
+        navigator.vibrate([35, 75, 40]);
+      }
+    }
+
+    function showHomeScreen() {
+      gameMode = 'home';
+      gameRunning = false;
+      hud.classList.add('opacity-0', 'pointer-events-none');
+      updateHomeLevelUI();
+      syncAudioLabels();
+      setOverlayVisibility(introScreen);
+
+      if (!homeAmbientRunning) {
+        homeAmbientRunning = true;
+        requestAnimationFrame(renderHomeAmbientLoop);
+      }
+    }
+
+    function openInviteScreen() {
+      initAmbientSynth();
+      gameMode = 'invite';
+      hud.classList.add('opacity-0', 'pointer-events-none');
+      setOverlayVisibility(inviteScreen);
+      if (!gameRunning) {
+        gameRunning = true;
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    switchUserBtn.addEventListener('click', () => {
+      gameRunning = false;
+      hud.classList.add('opacity-0', 'pointer-events-none');
+      authPin.value = '';
+      checkSavedQuickProfile();
+      setOverlayVisibility(authScreen);
+    });
+
+    homeBtn.addEventListener('click', () => {
+      showHomeScreen();
+    });
+
+    levelupHomeBtn.addEventListener('click', () => {
+      showHomeScreen();
+    });
+
+    failHomeBtn.addEventListener('click', () => {
+      showHomeScreen();
+    });
+
+    inviteHomeBtn.addEventListener('click', () => {
+      showHomeScreen();
+    });
+
+    countdownBtn.addEventListener('click', () => {
+      openCountdownScreen();
+    });
+
+    countdownBackInviteBtn.addEventListener('click', () => {
+      openInviteScreen();
+    });
+
+    countdownHomeBtn.addEventListener('click', () => {
+      showHomeScreen();
+    });
+
+    viewInviteShortcut.addEventListener('click', () => {
+      openInviteScreen();
+    });
+
+    /* ==========================================================================
+       6. THE SILK THREAD — 25-LEVEL CHALLENGE + AMBIENT DRIFT ENGINE
+       ========================================================================== */
+    let gameRunning = false;
+    let homeAmbientRunning = false;
+    let gameMode = 'home'; // 'home' | 'play' | 'ambient' | 'levelup' | 'fail' | 'invite'
+
+    let activeConfig = getLevelConfig(1);
+    let score = 0;
+    let warmth = 100;
+    let headX = width / 2;
+    let headY = height / 2;
+    let headingAngle = -Math.PI / 2;
+    let silkTrail = [];
+    let embers = [];
+    let thorns = [];
+    let anchoredConstellation = [];
+    let ripples = [];
+    let ambientParticles = Array.from({ length: 28 }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      r: Math.random() * 2.2 + 0.8,
+      vx: (Math.random() - 0.5) * 0.35,
+      vy: -Math.random() * 0.35 - 0.1,
+      phase: Math.random() * Math.PI * 2
+    }));
+
+    const pointer = {
+      x: width / 2,
+      y: height / 2,
+      active: false
+    };
+
+    window.addEventListener('pointerdown', (e) => {
+      pointer.active = true;
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      if (gameMode === 'ambient') {
+        ripples.push({ x: e.clientX, y: e.clientY, r: 6, alpha: 0.9 });
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      if (gameMode === 'ambient' && pointer.active && Math.random() < 0.45) {
+        ripples.push({ x: e.clientX, y: e.clientY, r: 4, alpha: 0.65 });
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
+      pointer.active = false;
+    });
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    // Pause fairly if user switches apps on Android
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && gameMode === 'play') {
+        showHomeScreen();
+      }
+    });
+
+    function spawnEmber(cfg) {
+      const pad = cfg.arenaMargin + 44;
+      const topPad = Math.max(pad, 88);
+      return {
+        x: pad + Math.random() * Math.max(60, width - pad * 2),
+        y: topPad + Math.random() * Math.max(60, height - topPad - pad),
+        vx: (Math.random() - 0.5) * cfg.emberDriftSpeed,
+        vy: (Math.random() - 0.5) * cfg.emberDriftSpeed,
+        phase: Math.random() * Math.PI * 2
+      };
+    }
+
+    function spawnThorn(cfg, safeX, safeY) {
+      const pad = cfg.arenaMargin + 40;
+      const topPad = Math.max(pad, 88);
+      let x = width / 2;
+      let y = height / 2;
+      for (let attempt = 0; attempt < 25; attempt++) {
+        x = pad + Math.random() * Math.max(60, width - pad * 2);
+        y = topPad + Math.random() * Math.max(60, height - topPad - pad);
+        if (Math.hypot(x - safeX, y - safeY) > 125) break;
+      }
+      const speedScale = 0.45 + cfg.level * 0.042;
+      return {
+        x,
+        y,
+        vx: (Math.random() - 0.5) * speedScale * 2,
+        vy: (Math.random() - 0.5) * speedScale * 2,
+        radius: 11 + Math.min(6, cfg.level * 0.22),
+        angle: Math.random() * Math.PI * 2,
+        spin: (Math.random() < 0.5 ? -1 : 1) * (0.02 + cfg.level * 0.0015)
+      };
+    }
+
+    function startLevel(lvl) {
+      initAmbientSynth();
+      activeConfig = getLevelConfig(lvl);
+      score = 0;
+      warmth = 100;
+      headX = width / 2;
+      headY = height * 0.62;
+      headingAngle = -Math.PI / 2;
+      pointer.x = headX;
+      pointer.y = headY - 80;
+      pointer.active = false;
+
+      silkTrail = [];
+      for (let i = 0; i < 24; i++) {
+        silkTrail.push({ x: headX, y: headY + (24 - i) * 2.2 });
+      }
+      anchoredConstellation = [];
+
+      embers = Array.from({ length: Math.min(4, activeConfig.targetEmbers) }, () => spawnEmber(activeConfig));
+      thorns = Array.from({ length: activeConfig.thornCount }, () => spawnThorn(activeConfig, headX, headY));
+
+      hudLevelBadge.textContent = `Lv ${activeConfig.level}/${MAX_LEVELS}`;
+      hudEmberCount.textContent = `0 / ${activeConfig.targetEmbers}`;
+      progressBar.style.width = '0%';
+      warmthBar.style.width = '100%';
+
+      hudMeters.classList.remove('hidden');
+      hudAmbientLabel.classList.add('hidden');
+      hud.classList.remove('opacity-0', 'pointer-events-none');
+
+      setOverlayVisibility(null);
+      gameMode = 'play';
+      if (!gameRunning) {
+        gameRunning = true;
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function startAmbientMode() {
+      initAmbientSynth();
+      ripples = [];
+      headX = width / 2;
+      headY = height / 2;
+      pointer.x = headX;
+      pointer.y = headY;
+      silkTrail = [];
+
+      hudMeters.classList.add('hidden');
+      hudAmbientLabel.classList.remove('hidden');
+      hud.classList.remove('opacity-0', 'pointer-events-none');
+
+      setOverlayVisibility(null);
+      gameMode = 'ambient';
+      if (!gameRunning) {
+        gameRunning = true;
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function triggerFail(reasonText) {
+      if (gameMode !== 'play') return;
+      gameMode = 'fail';
+      playSnapSound();
+      pulseHeartbeat('snap');
+
+      hud.classList.add('opacity-0', 'pointer-events-none');
+      failTierTag.textContent = `Level ${activeConfig.level} • ${activeConfig.tierName.split('•')[1].trim()}`;
+      failReason.textContent = reasonText;
+      failStats.textContent = `Woven: ${score} / ${activeConfig.targetEmbers} Embers`;
+      setOverlayVisibility(failScreen);
+    }
+
+    async function triggerLevelComplete() {
+      if (gameMode !== 'play') return;
+      playChord([261.63, 329.63, 392.00, 493.88, 587.33], 2.2);
+      pulseHeartbeat('win');
+
+      if (currentUser) {
+        currentUser.completedLevels = Math.max(currentUser.completedLevels || 0, activeConfig.level);
+        if (activeConfig.level >= MAX_LEVELS) {
+          currentUser.inviteUnlocked = true;
+          currentUser.highestUnlockedLevel = MAX_LEVELS;
+        } else {
+          currentUser.highestUnlockedLevel = Math.max(
+            currentUser.highestUnlockedLevel || 1,
+            activeConfig.level + 1
+          );
+        }
+        await saveStoredProfile(currentUser);
+      }
+
+      hud.classList.add('opacity-0', 'pointer-events-none');
+
+      if (activeConfig.level >= MAX_LEVELS) {
+        gameMode = 'invite';
+        setOverlayVisibility(inviteScreen);
+      } else {
+        gameMode = 'levelup';
+        const nextLvl = activeConfig.level + 1;
+        const nextCfg = getLevelConfig(nextLvl);
+        selectedLevel = nextLvl;
+        levelupTierInfo.textContent = `${activeConfig.tierName} • Cleared`;
+        levelupTitle.textContent = `Level ${activeConfig.level} Complete`;
+        levelupSubtitle.textContent = `Next: Level ${nextLvl} (${nextCfg.targetEmbers} Embers, ${nextCfg.thornCount} Shadow Thorns).`;
+        nextLevelBtnModal.textContent = `Continue to Level ${nextLvl}`;
+        setOverlayVisibility(levelupScreen);
+      }
+    }
+
+    startBtn.addEventListener('click', () => startLevel(selectedLevel));
+    ambientBtn.addEventListener('click', () => startAmbientMode());
+    retryBtn.addEventListener('click', () => startLevel(activeConfig.level));
+    nextLevelBtnModal.addEventListener('click', () => startLevel(Math.min(MAX_LEVELS, activeConfig.level + 1)));
+
+    /* ==========================================================================
+       7. RENDERING LOOPS (Home Ambient + Gameplay + Ring Finale)
+       ========================================================================== */
+    function drawBackgroundParticles(bass) {
+      ambientParticles.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.phase += 0.03;
+
+        if (p.x < 0) p.x = width;
+        if (p.x > width) p.x = 0;
+        if (p.y < 0) p.y = height;
+        if (p.y > height) p.y = 0;
+
+        const alpha = 0.18 + Math.sin(p.phase) * 0.12 + bass * 0.15;
+        ctx.fillStyle = `rgba(230, 184, 125, ${Math.max(0.05, alpha)})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r + bass * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function renderHomeAmbientLoop() {
+      if (!homeAmbientRunning) return;
+      if (gameMode === 'home') {
+        const bass = getBassEnergy();
+        ctx.fillStyle = 'rgba(11, 5, 8, 0.28)';
+        ctx.fillRect(0, 0, width, height);
+        drawBackgroundParticles(bass);
+      }
+      requestAnimationFrame(renderHomeAmbientLoop);
+    }
+
+    function updateAndDrawGameplay(bass) {
+      const cfg = activeConfig;
+      const margin = cfg.arenaMargin;
+      const topBound = Math.max(margin, 66);
+      const bottomBound = height - margin;
+      const leftBound = margin;
+      const rightBound = width - margin;
+
+      // Steer heading smoothly toward pointer when touched
+      if (pointer.active) {
+        const desiredAngle = Math.atan2(pointer.y - headY, pointer.x - headX);
+        let diff = desiredAngle - headingAngle;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        headingAngle += Math.max(-cfg.turnRate, Math.min(cfg.turnRate, diff));
+      }
+
+      headX += Math.cos(headingAngle) * cfg.speed;
+      headY += Math.sin(headingAngle) * cfg.speed;
+
+      // Arena Boundary Check
+      if (headX < leftBound || headX > rightBound || headY < topBound || headY > bottomBound) {
+        triggerFail('The ribbon touched the outer golden boundary.');
+        return;
+      }
+
+      // Append to silk trail & enforce length
+      silkTrail.push({ x: headX, y: headY });
+      const maxTrailPts = 36 + score * 14;
+      while (silkTrail.length > maxTrailPts) {
+        silkTrail.shift();
+      }
+
+      // Self-Tangle Check (skip newest 22 points near the head)
+      for (let i = 0; i < silkTrail.length - 22; i++) {
+        if (Math.hypot(headX - silkTrail[i].x, headY - silkTrail[i].y) < 8.5) {
+          triggerFail('The silk thread crossed its own path.');
+          return;
+        }
+      }
+
+      // Warmth Decay
+      warmth -= cfg.warmthDecay;
+      warmthBar.style.width = `${Math.max(0, warmth)}%`;
+      if (warmth <= 0) {
+        triggerFail('The ribbon’s warmth faded before the final ember was gathered.');
+        return;
+      }
+
+      // Draw Golden Arena Frame
+      ctx.save();
+      ctx.strokeStyle = `rgba(230, 184, 125, ${0.22 + bass * 0.18})`;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(leftBound, topBound, rightBound - leftBound, bottomBound - topBound);
+      ctx.restore();
+
+      // Draw Constellation Lines Between Collected Embers
+      if (anchoredConstellation.length > 1) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(230, 184, 125, 0.25)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        anchoredConstellation.forEach((pt, idx) => {
+          if (idx === 0) ctx.moveTo(pt.x, pt.y);
+          else ctx.lineTo(pt.x, pt.y);
+        });
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Update & Draw Embers
+      for (let i = embers.length - 1; i >= 0; i--) {
+        const emb = embers[i];
+        emb.phase += 0.05;
+
+        // Elusive evasion in Tier III+
+        if (cfg.evadeStrength > 0) {
+          const distToHead = Math.hypot(emb.x - headX, emb.y - headY);
+          if (distToHead < 135 && distToHead > 1) {
+            const pushAngle = Math.atan2(emb.y - headY, emb.x - headX);
+            emb.vx += Math.cos(pushAngle) * 0.045 * cfg.evadeStrength;
+            emb.vy += Math.sin(pushAngle) * 0.045 * cfg.evadeStrength;
+          }
+        }
+
+        // Clamp ember velocity
+        const maxEmbSpeed = cfg.emberDriftSpeed + cfg.evadeStrength * 0.85;
+        const curSpd = Math.hypot(emb.vx, emb.vy);
+        if (curSpd > maxEmbSpeed && curSpd > 0) {
+          emb.vx = (emb.vx / curSpd) * maxEmbSpeed;
+          emb.vy = (emb.vy / curSpd) * maxEmbSpeed;
+        }
+
+        emb.x += emb.vx;
+        emb.y += emb.vy;
+
+        const embPad = 22;
+        if (emb.x < leftBound + embPad) { emb.x = leftBound + embPad; emb.vx *= -1; }
+        if (emb.x > rightBound - embPad) { emb.x = rightBound - embPad; emb.vx *= -1; }
+        if (emb.y < topBound + embPad) { emb.y = topBound + embPad; emb.vy *= -1; }
+        if (emb.y > bottomBound - embPad) { emb.y = bottomBound - embPad; emb.vy *= -1; }
+
+        // Check Collection
+        if (Math.hypot(headX - emb.x, headY - emb.y) < 24) {
+          anchoredConstellation.push({ x: emb.x, y: emb.y });
+          score++;
+          warmth = Math.min(100, warmth + 24);
+          playChimeNote();
+          pulseHeartbeat('soft');
+
+          hudEmberCount.textContent = `${score} / ${cfg.targetEmbers}`;
+          progressBar.style.width = `${(score / cfg.targetEmbers) * 100}%`;
+
+          if (score >= cfg.targetEmbers) {
+            triggerLevelComplete();
+            return;
+          }
+
+          const remainingNeeded = cfg.targetEmbers - score;
+          if (remainingNeeded >= embers.length) {
+            embers[i] = spawnEmber(cfg);
+          } else {
+            embers.splice(i, 1);
+          }
+          continue;
+        }
+
+        // Draw Glowing Ember
+        const glowR = 9 + Math.sin(emb.phase) * 2.5 + bass * 8;
+        const grad = ctx.createRadialGradient(emb.x, emb.y, 1, emb.x, emb.y, glowR * 2.3);
+        grad.addColorStop(0, '#fff7e8');
+        grad.addColorStop(0.4, 'rgba(230, 184, 125, 0.88)');
+        grad.addColorStop(1, 'rgba(230, 184, 125, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(emb.x, emb.y, glowR * 2.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Update & Draw Crimson Shadow Thorns
+      for (let i = 0; i < thorns.length; i++) {
+        const th = thorns[i];
+        th.x += th.vx;
+        th.y += th.vy;
+        th.angle += th.spin;
+
+        const thPad = th.radius + 8;
+        if (th.x < leftBound + thPad) { th.x = leftBound + thPad; th.vx *= -1; }
+        if (th.x > rightBound - thPad) { th.x = rightBound - thPad; th.vx *= -1; }
+        if (th.y < topBound + thPad) { th.y = topBound + thPad; th.vy *= -1; }
+        if (th.y > bottomBound - thPad) { th.y = bottomBound - thPad; th.vy *= -1; }
+
+        if (Math.hypot(headX - th.x, headY - th.y) < th.radius + 5) {
+          triggerFail('A crimson shadow thorn pierced the ribbon.');
+          return;
+        }
+
+        // Draw Rotating 4-Point Shadow Star/Thorn
+        ctx.save();
+        ctx.translate(th.x, th.y);
+        ctx.rotate(th.angle);
+
+        const aura = ctx.createRadialGradient(0, 0, 2, 0, 0, th.radius * 2);
+        aura.addColorStop(0, 'rgba(217, 83, 111, 0.65)');
+        aura.addColorStop(1, 'rgba(217, 83, 111, 0)');
+        ctx.fillStyle = aura;
+        ctx.beginPath();
+        ctx.arc(0, 0, th.radius * 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#3b0d1b';
+        ctx.strokeStyle = '#d9536f';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        const spikes = 4;
+        for (let s = 0; s < spikes * 2; s++) {
+          const r = s % 2 === 0 ? th.radius : th.radius * 0.42;
+          const a = (s * Math.PI) / spikes;
+          if (s === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+          else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Draw Silk Ribbon
+      if (silkTrail.length > 2) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.shadowColor = '#e6b87d';
+        ctx.shadowBlur = 14 + bass * 12;
+
+        for (let i = 1; i < silkTrail.length; i++) {
+          const ratio = i / silkTrail.length;
+          ctx.strokeStyle = `rgba(230, 184, 125, ${0.18 + ratio * 0.82})`;
+          ctx.lineWidth = 1.5 + ratio * 4.5;
+          ctx.beginPath();
+          ctx.moveTo(silkTrail[i - 1].x, silkTrail[i - 1].y);
+          ctx.lineTo(silkTrail[i].x, silkTrail[i].y);
+          ctx.stroke();
+        }
+
+        // Luminous Head Spark
+        ctx.fillStyle = '#fff8ec';
+        ctx.beginPath();
+        ctx.arc(headX, headY, 4.2 + bass * 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function updateAndDrawAmbientDrift(bass) {
+      headX += (pointer.x - headX) * 0.14;
+      headY += (pointer.y - headY) * 0.14;
+      silkTrail.push({ x: headX, y: headY });
+      while (silkTrail.length > 48) silkTrail.shift();
+
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const rp = ripples[i];
+        rp.r += 2.2 + bass * 1.5;
+        rp.alpha *= 0.965;
+        if (rp.alpha < 0.02) {
+          ripples.splice(i, 1);
+          continue;
+        }
+        ctx.strokeStyle = `rgba(230, 184, 125, ${rp.alpha})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      if (silkTrail.length > 2) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.shadowColor = '#e6b87d';
+        ctx.shadowBlur = 18 + bass * 16;
+        for (let i = 1; i < silkTrail.length; i++) {
+          const ratio = i / silkTrail.length;
+          ctx.strokeStyle = `rgba(230, 184, 125, ${ratio * 0.85})`;
+          ctx.lineWidth = ratio * 6;
+          ctx.beginPath();
+          ctx.moveTo(silkTrail[i - 1].x, silkTrail[i - 1].y);
+          ctx.lineTo(silkTrail[i].x, silkTrail[i].y);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawInviteRingAura(bass) {
+      const cx = width / 2;
+      const cy = height / 2;
+      const r = Math.min(width, height) * 0.28;
+
+      ctx.save();
+      ctx.strokeStyle = `rgba(230, 184, 125, ${0.25 + bass * 0.35})`;
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#e6b87d';
+      ctx.shadowBlur = 24 + bass * 20;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+
+      const bass = getBassEnergy();
+      ctx.fillStyle = gameMode === 'play' ? 'rgba(11, 5, 8, 0.34)' : 'rgba(11, 5, 8, 0.24)';
+      ctx.fillRect(0, 0, width, height);
+
+      drawBackgroundParticles(bass);
+
+      if (gameMode === 'play') {
+        updateAndDrawGameplay(bass);
+      } else if (gameMode === 'ambient') {
+        updateAndDrawAmbientDrift(bass);
+      } else if (gameMode === 'invite' || gameMode === 'countdown') {
+        drawInviteRingAura(bass);
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    /* ==========================================================================
+       8. INITIALIZATION
+       ========================================================================== */
+    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    loadCustomTracksFromDB();
+    checkSavedQuickProfile();
+    setAuthMode('signin');
+    homeAmbientRunning = true;
+    requestAnimationFrame(renderHomeAmbientLoop);
+  </script>
+</body>
+</html>

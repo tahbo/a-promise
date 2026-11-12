@@ -1,0 +1,17 @@
+{
+    "name": "A Promise",
+    "short_name": "A Promise",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#0b0508",
+    "theme_color": "#0b0508",
+    "icons": [
+      {
+        "src": "./icon.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any maskable"
+      }
+    ]
+  }
