@@ -1672,7 +1672,7 @@
     }
 
     /* ==========================================================================
-       4. 25-LEVEL ESCALATING DIFFICULTY CONFIGURATION
+       4. 25-LEVEL ESCALATING DIFFICULTY CONFIGURATION (Calibrated to 9/10 Challenge)
        ========================================================================== */
     function getLevelConfig(lvl) {
       const clamped = Math.max(1, Math.min(MAX_LEVELS, lvl));
@@ -1681,26 +1681,27 @@
 
       if (clamped >= 21) {
         tierName = 'Tier V • The Promise';
-        tierSubtitle = 'Peak velocity, patrolling crimson thorns, and agile evasive embers stand between you and the ring.';
+        tierSubtitle = 'Swift velocity, patrolling crimson thorns, and agile evasive embers stand between you and the ring.';
       } else if (clamped >= 16) {
         tierName = 'Tier IV • Crimson Veil';
         tierSubtitle = 'Shadow thorns patrol faster and the golden sanctuary narrows. Keep your warmth alive.';
       } else if (clamped >= 11) {
         tierName = 'Tier III • Elusive Sparks';
-        tierSubtitle = 'Embers sense your ribbon and drift away if approached directly. Curve wide to catch them.';
+        tierSubtitle = 'Embers sense your ribbon and drift away if approached directly. Curve sharply to catch them.';
       } else if (clamped >= 6) {
         tierName = 'Tier II • Magnetic Drift';
         tierSubtitle = 'The ribbon glides faster and embers begin drifting across the dark velvet arena.';
       }
 
-      const targetEmbers = 7 + Math.floor((clamped - 1) * 0.4); // 7 up to 16 embers
-      const thornCount = Math.min(10, 3 + Math.floor((clamped - 1) * 0.3)); // 3 up to 10 thorns
-      const speed = 2.35 + (clamped - 1) * 0.088; // 2.35 up to 4.46 px/frame
-      const turnRate = Math.max(0.058, 0.092 - (clamped - 1) * 0.0014);
-      const warmthDecay = 0.052 + (clamped - 1) * 0.0024; // Drains faster on higher levels
-      const emberDriftSpeed = clamped < 3 ? 0.15 : 0.35 + (clamped - 1) * 0.045;
-      const evadeStrength = clamped < 9 ? 0 : Math.min(1.65, (clamped - 8) * 0.095);
-      const arenaMargin = Math.min(48, 22 + Math.floor((clamped - 1) * 1.05));
+      // Slightly dialed back from 10/10 to 9/10 challenge while keeping responsive, sharp handling
+      const targetEmbers = 7 + Math.floor((clamped - 1) * 0.35); // 7 up to 15 embers
+      const thornCount = Math.min(9, 2 + Math.floor(clamped * 0.3)); // 2 up to 9 thorns
+      const speed = 2.25 + (clamped - 1) * 0.078; // 2.25 up to 4.12 px/frame
+      const turnRate = Math.max(0.115, 0.155 - (clamped - 1) * 0.0015); // Crisp, fast cornering across all levels
+      const warmthDecay = 0.044 + (clamped - 1) * 0.002; // Slightly more forgiving warmth pacing
+      const emberDriftSpeed = clamped < 3 ? 0.14 : 0.32 + (clamped - 1) * 0.04;
+      const evadeStrength = clamped < 10 ? 0 : Math.min(1.42, (clamped - 9) * 0.088);
+      const arenaMargin = Math.min(44, 20 + Math.floor((clamped - 1) * 0.95));
 
       return {
         level: clamped,
@@ -1907,6 +1908,8 @@
     let headX = width / 2;
     let headY = height / 2;
     let headingAngle = -Math.PI / 2;
+    let angularVelocity = 0;
+    let lastFrameTime = performance.now();
     let silkTrail = [];
     let embers = [];
     let thorns = [];
@@ -1980,17 +1983,17 @@
       for (let attempt = 0; attempt < 25; attempt++) {
         x = pad + Math.random() * Math.max(60, width - pad * 2);
         y = topPad + Math.random() * Math.max(60, height - topPad - pad);
-        if (Math.hypot(x - safeX, y - safeY) > 125) break;
+        if (Math.hypot(x - safeX, y - safeY) > 130) break;
       }
-      const speedScale = 0.45 + cfg.level * 0.042;
+      const speedScale = 0.4 + cfg.level * 0.037;
       return {
         x,
         y,
         vx: (Math.random() - 0.5) * speedScale * 2,
         vy: (Math.random() - 0.5) * speedScale * 2,
-        radius: 11 + Math.min(6, cfg.level * 0.22),
+        radius: 10.5 + Math.min(5.5, cfg.level * 0.2),
         angle: Math.random() * Math.PI * 2,
-        spin: (Math.random() < 0.5 ? -1 : 1) * (0.02 + cfg.level * 0.0015)
+        spin: (Math.random() < 0.5 ? -1 : 1) * (0.02 + cfg.level * 0.0014)
       };
     }
 
@@ -2002,6 +2005,8 @@
       headX = width / 2;
       headY = height * 0.62;
       headingAngle = -Math.PI / 2;
+      angularVelocity = 0;
+      lastFrameTime = performance.now();
       pointer.x = headX;
       pointer.y = headY - 80;
       pointer.active = false;
@@ -2141,7 +2146,7 @@
       requestAnimationFrame(renderHomeAmbientLoop);
     }
 
-    function updateAndDrawGameplay(bass) {
+    function updateAndDrawGameplay(bass, dt) {
       const cfg = activeConfig;
       const margin = cfg.arenaMargin;
       const topBound = Math.max(margin, 66);
@@ -2149,17 +2154,38 @@
       const leftBound = margin;
       const rightBound = width - margin;
 
-      // Steer heading smoothly toward pointer when touched
+      // Crisp, smooth, high-agility cornering toward pointer
+      let turnSharpness = 0;
       if (pointer.active) {
-        const desiredAngle = Math.atan2(pointer.y - headY, pointer.x - headX);
-        let diff = desiredAngle - headingAngle;
-        while (diff > Math.PI) diff -= Math.PI * 2;
-        while (diff < -Math.PI) diff += Math.PI * 2;
-        headingAngle += Math.max(-cfg.turnRate, Math.min(cfg.turnRate, diff));
+        const dx = pointer.x - headX;
+        const dy = pointer.y - headY;
+        if (dx * dx + dy * dy > 16) {
+          const desiredAngle = Math.atan2(dy, dx);
+          let diff = desiredAngle - headingAngle;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+
+          turnSharpness = Math.min(1, Math.abs(diff) / (Math.PI * 0.55));
+          // Proportional + snappy max angular step so sharp corners feel instant yet silky
+          const targetVel = Math.max(
+            -cfg.turnRate * 1.65,
+            Math.min(cfg.turnRate * 1.65, diff * 0.34)
+          );
+          angularVelocity += (targetVel - angularVelocity) * Math.min(1, 0.48 * dt);
+        } else {
+          angularVelocity *= Math.pow(0.65, dt);
+        }
+      } else {
+        angularVelocity *= Math.pow(0.6, dt);
       }
 
-      headX += Math.cos(headingAngle) * cfg.speed;
-      headY += Math.sin(headingAngle) * cfg.speed;
+      headingAngle += angularVelocity * dt;
+
+      // Slight apex speed boost on tight corners so turns feel snappy and responsive
+      const cornerBoost = 1 + turnSharpness * 0.12;
+      const stepDist = cfg.speed * cornerBoost * dt;
+      headX += Math.cos(headingAngle) * stepDist;
+      headY += Math.sin(headingAngle) * stepDist;
 
       // Arena Boundary Check
       if (headX < leftBound || headX > rightBound || headY < topBound || headY > bottomBound) {
@@ -2167,23 +2193,37 @@
         return;
       }
 
-      // Append to silk trail & enforce length
-      silkTrail.push({ x: headX, y: headY });
-      const maxTrailPts = 36 + score * 14;
+      // Append smoothly interpolated points along the step so sharp corners never look faceted
+      const prevPt = silkTrail[silkTrail.length - 1];
+      const segLen = prevPt ? Math.hypot(headX - prevPt.x, headY - prevPt.y) : 0;
+      if (segLen > 2.4) {
+        const subSteps = Math.min(4, Math.ceil(segLen / 2.2));
+        for (let s = 1; s <= subSteps; s++) {
+          const t = s / subSteps;
+          silkTrail.push({
+            x: prevPt.x + (headX - prevPt.x) * t,
+            y: prevPt.y + (headY - prevPt.y) * t
+          });
+        }
+      } else {
+        silkTrail.push({ x: headX, y: headY });
+      }
+
+      const maxTrailPts = 42 + score * 15;
       while (silkTrail.length > maxTrailPts) {
         silkTrail.shift();
       }
 
-      // Self-Tangle Check (skip newest 22 points near the head)
-      for (let i = 0; i < silkTrail.length - 22; i++) {
-        if (Math.hypot(headX - silkTrail[i].x, headY - silkTrail[i].y) < 8.5) {
+      // Self-Tangle Check (skip newest 28 points so sharp hairpin turns don't unfairly self-collide)
+      for (let i = 0; i < silkTrail.length - 28; i++) {
+        if (Math.hypot(headX - silkTrail[i].x, headY - silkTrail[i].y) < 8) {
           triggerFail('The silk thread crossed its own path.');
           return;
         }
       }
 
       // Warmth Decay
-      warmth -= cfg.warmthDecay;
+      warmth -= cfg.warmthDecay * dt;
       warmthBar.style.width = `${Math.max(0, warmth)}%`;
       if (warmth <= 0) {
         triggerFail('The ribbon’s warmth faded before the final ember was gathered.');
@@ -2214,28 +2254,28 @@
       // Update & Draw Embers
       for (let i = embers.length - 1; i >= 0; i--) {
         const emb = embers[i];
-        emb.phase += 0.05;
+        emb.phase += 0.05 * dt;
 
         // Elusive evasion in Tier III+
         if (cfg.evadeStrength > 0) {
           const distToHead = Math.hypot(emb.x - headX, emb.y - headY);
-          if (distToHead < 135 && distToHead > 1) {
+          if (distToHead < 130 && distToHead > 1) {
             const pushAngle = Math.atan2(emb.y - headY, emb.x - headX);
-            emb.vx += Math.cos(pushAngle) * 0.045 * cfg.evadeStrength;
-            emb.vy += Math.sin(pushAngle) * 0.045 * cfg.evadeStrength;
+            emb.vx += Math.cos(pushAngle) * 0.042 * cfg.evadeStrength * dt;
+            emb.vy += Math.sin(pushAngle) * 0.042 * cfg.evadeStrength * dt;
           }
         }
 
         // Clamp ember velocity
-        const maxEmbSpeed = cfg.emberDriftSpeed + cfg.evadeStrength * 0.85;
+        const maxEmbSpeed = cfg.emberDriftSpeed + cfg.evadeStrength * 0.8;
         const curSpd = Math.hypot(emb.vx, emb.vy);
         if (curSpd > maxEmbSpeed && curSpd > 0) {
           emb.vx = (emb.vx / curSpd) * maxEmbSpeed;
           emb.vy = (emb.vy / curSpd) * maxEmbSpeed;
         }
 
-        emb.x += emb.vx;
-        emb.y += emb.vy;
+        emb.x += emb.vx * dt;
+        emb.y += emb.vy * dt;
 
         const embPad = 22;
         if (emb.x < leftBound + embPad) { emb.x = leftBound + embPad; emb.vx *= -1; }
@@ -2243,11 +2283,11 @@
         if (emb.y < topBound + embPad) { emb.y = topBound + embPad; emb.vy *= -1; }
         if (emb.y > bottomBound - embPad) { emb.y = bottomBound - embPad; emb.vy *= -1; }
 
-        // Check Collection
-        if (Math.hypot(headX - emb.x, headY - emb.y) < 24) {
+        // Check Collection (slightly more generous pickup radius for crisp cornering)
+        if (Math.hypot(headX - emb.x, headY - emb.y) < 26) {
           anchoredConstellation.push({ x: emb.x, y: emb.y });
           score++;
-          warmth = Math.min(100, warmth + 24);
+          warmth = Math.min(100, warmth + 26);
           playChimeNote();
           pulseHeartbeat('soft');
 
@@ -2283,9 +2323,9 @@
       // Update & Draw Crimson Shadow Thorns
       for (let i = 0; i < thorns.length; i++) {
         const th = thorns[i];
-        th.x += th.vx;
-        th.y += th.vy;
-        th.angle += th.spin;
+        th.x += th.vx * dt;
+        th.y += th.vy * dt;
+        th.angle += th.spin * dt;
 
         const thPad = th.radius + 8;
         if (th.x < leftBound + thPad) { th.x = leftBound + thPad; th.vx *= -1; }
@@ -2293,7 +2333,7 @@
         if (th.y < topBound + thPad) { th.y = topBound + thPad; th.vy *= -1; }
         if (th.y > bottomBound - thPad) { th.y = bottomBound - thPad; th.vy *= -1; }
 
-        if (Math.hypot(headX - th.x, headY - th.y) < th.radius + 5) {
+        if (Math.hypot(headX - th.x, headY - th.y) < th.radius + 4) {
           triggerFail('A crimson shadow thorn pierced the ribbon.');
           return;
         }
@@ -2328,7 +2368,7 @@
         ctx.restore();
       }
 
-      // Draw Silk Ribbon
+      // Draw Smooth Quadratic Silk Ribbon
       if (silkTrail.length > 2) {
         ctx.save();
         ctx.lineCap = 'round';
@@ -2336,13 +2376,18 @@
         ctx.shadowColor = '#e6b87d';
         ctx.shadowBlur = 14 + bass * 12;
 
-        for (let i = 1; i < silkTrail.length; i++) {
+        for (let i = 1; i < silkTrail.length - 1; i++) {
           const ratio = i / silkTrail.length;
+          const xc = (silkTrail[i].x + silkTrail[i + 1].x) * 0.5;
+          const yc = (silkTrail[i].y + silkTrail[i + 1].y) * 0.5;
+          const prevMidX = i === 1 ? silkTrail[0].x : (silkTrail[i - 1].x + silkTrail[i].x) * 0.5;
+          const prevMidY = i === 1 ? silkTrail[0].y : (silkTrail[i - 1].y + silkTrail[i].y) * 0.5;
+
           ctx.strokeStyle = `rgba(230, 184, 125, ${0.18 + ratio * 0.82})`;
           ctx.lineWidth = 1.5 + ratio * 4.5;
           ctx.beginPath();
-          ctx.moveTo(silkTrail[i - 1].x, silkTrail[i - 1].y);
-          ctx.lineTo(silkTrail[i].x, silkTrail[i].y);
+          ctx.moveTo(prevMidX, prevMidY);
+          ctx.quadraticCurveTo(silkTrail[i].x, silkTrail[i].y, xc, yc);
           ctx.stroke();
         }
 
@@ -2410,8 +2455,11 @@
       ctx.restore();
     }
 
-    function gameLoop() {
+    function gameLoop(now = performance.now()) {
       if (!gameRunning) return;
+
+      const dt = Math.min(2.0, Math.max(0.5, (now - lastFrameTime) / 16.667));
+      lastFrameTime = now;
 
       const bass = getBassEnergy();
       ctx.fillStyle = gameMode === 'play' ? 'rgba(11, 5, 8, 0.34)' : 'rgba(11, 5, 8, 0.24)';
@@ -2420,7 +2468,7 @@
       drawBackgroundParticles(bass);
 
       if (gameMode === 'play') {
-        updateAndDrawGameplay(bass);
+        updateAndDrawGameplay(bass, dt);
       } else if (gameMode === 'ambient') {
         updateAndDrawAmbientDrift(bass);
       } else if (gameMode === 'invite' || gameMode === 'countdown') {
