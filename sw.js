@@ -1,4 +1,4 @@
-const CACHE_NAME = 'promise-apk-v2';
+const CACHE_NAME = 'promise-apk-v3';
 const CORE_ASSETS = [
   './',
   './index.html',
