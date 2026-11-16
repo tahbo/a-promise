@@ -85,15 +85,17 @@
       transform: scale(0.97);
     }
 
-    /* Subtle custom scrollbar for playlist drawer */
-    #track-list-items::-webkit-scrollbar {
+    #track-list-items::-webkit-scrollbar,
+    #keepsake-scroll::-webkit-scrollbar {
       width: 4px;
     }
-    #track-list-items::-webkit-scrollbar-track {
+    #track-list-items::-webkit-scrollbar-track,
+    #keepsake-scroll::-webkit-scrollbar-track {
       background: rgba(255, 255, 255, 0.03);
       border-radius: 99px;
     }
-    #track-list-items::-webkit-scrollbar-thumb {
+    #track-list-items::-webkit-scrollbar-thumb,
+    #keepsake-scroll::-webkit-scrollbar-thumb {
       background: rgba(230, 184, 125, 0.3);
       border-radius: 99px;
     }
@@ -105,6 +107,27 @@
 
     .ring-aura {
       animation: pulseGlow 3.2s infinite ease-in-out;
+    }
+
+    @keyframes spinVinyl {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .vinyl-spinning {
+      animation: spinVinyl 12s linear infinite;
+    }
+
+    .vinyl-paused {
+      animation-play-state: paused;
+    }
+
+    .polaroid-card {
+      background: linear-gradient(165deg, #fbf4ee 0%, #f1e2d6 100%);
+      color: #211018;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(230, 184, 125, 0.45);
+      transition: transform 0.14s ease-out;
+      will-change: transform;
     }
   </style>
 </head>
@@ -125,9 +148,9 @@
     <!-- Center: Level, Combo, Ember & Warmth Progress Bars -->
     <div id="hud-meters" class="flex-1 max-w-xs mx-auto space-y-1.5">
       <div class="flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-[#f7ece6]/75">
-        <span id="hud-level-badge">Lv 1/25</span>
+        <span id="hud-level-badge">Lv 1/50</span>
         <span id="hud-combo-badge" class="hidden text-[#fff5e4] font-semibold tracking-[0.16em]">×2 Harmony</span>
-        <span id="hud-ember-count">0 / 7</span>
+        <span id="hud-ember-count">0 / 6</span>
       </div>
       <div class="w-full h-1.5 bg-[#e6b87d]/15 rounded-full overflow-hidden">
         <div id="progress-bar" class="h-full w-0 bg-gradient-to-r from-[#b85d6f] to-[#e6b87d] rounded-full transition-all duration-200"></div>
@@ -157,7 +180,7 @@
         A Promise Awaits
       </h1>
       <p class="text-xs sm:text-sm text-[#f7ece6]/70 leading-relaxed mb-5">
-        Sign in or create your local profile so your progress across all 25 levels stays saved offline.
+        Sign in or create your local profile so your progress across all 50 levels stays saved offline.
       </p>
 
       <!-- Mode Switcher Tabs -->
@@ -196,29 +219,40 @@
 
   <!-- SCREEN 2: App Home Screen & Soundtrack Lounge -->
   <section id="intro-screen" class="overlay-layer overlay-hidden fixed inset-0 z-30 flex items-center justify-center p-4 sm:p-5 bg-[radial-gradient(circle_at_center,rgba(32,12,21,0.68),rgba(11,5,8,0.94))] overflow-y-auto">
-    <div class="glass-card w-full max-w-md rounded-3xl p-6 sm:p-7 text-center my-auto">
-      <!-- Top Profile & Progress Row -->
-      <div class="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-[#e6b87d]/15">
+    <div class="glass-card w-full max-w-md rounded-3xl p-5 sm:p-6 text-center my-auto">
+      <!-- Top Profile, Keepsakes & Progress Row -->
+      <div class="flex items-center justify-between gap-2 mb-3.5 pb-3 border-b border-[#e6b87d]/15">
         <div class="text-left">
           <p id="home-welcome-user" class="text-xs font-medium text-[#fff5ef]">Welcome</p>
           <button id="switch-user-btn" type="button" class="text-[10px] uppercase tracking-[0.18em] text-[#e6b87d]/70 hover:text-[#e6b87d] transition">
             Switch Profile
           </button>
         </div>
-        <span id="home-best-badge" class="px-3 py-1 rounded-full bg-[#e6b87d]/12 border border-[#e6b87d]/25 text-[10px] uppercase tracking-[0.16em] text-[#e6b87d]">
-          Level 1 / 25
-        </span>
+
+        <div class="flex items-center gap-1.5">
+          <button id="open-keepsake-btn" type="button" class="px-2.5 py-1 rounded-full bg-[#e6b87d]/12 hover:bg-[#e6b87d]/20 border border-[#e6b87d]/30 text-[10px] uppercase tracking-[0.14em] text-[#fff5ef] transition flex items-center gap-1">
+            <svg viewBox="0 0 24 24" class="w-3 h-3 text-[#e6b87d]" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="3" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+            <span>Memories</span>
+          </button>
+          <span id="home-best-badge" class="px-2.5 py-1 rounded-full bg-[#e6b87d]/12 border border-[#e6b87d]/25 text-[10px] uppercase tracking-[0.14em] text-[#e6b87d]">
+            Lv 1 / 50
+          </span>
+        </div>
       </div>
 
-      <h2 class="font-serif-editorial text-3xl sm:text-[34px] text-[#fff5ef] leading-tight mb-2">
+      <h2 class="font-serif-editorial text-3xl sm:text-[34px] text-[#fff5ef] leading-tight mb-1.5">
         Weave the Silk Thread
       </h2>
-      <p id="home-tier-desc" class="text-xs sm:text-sm text-[#f7ece6]/75 leading-relaxed mb-4">
-        Guide the continuous golden ribbon through every ember without tangling or touching the crimson thorns. Complete all 25 levels to reveal the promise.
+      <p id="home-tier-desc" class="text-xs sm:text-sm text-[#f7ece6]/75 leading-relaxed mb-3.5">
+        Guide the continuous golden ribbon through every ember without tangling or touching the crimson thorns. Complete all 50 levels to reveal the promise.
       </p>
 
       <!-- Level Selector -->
-      <div class="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-2xl bg-[#14080e]/85 border border-[#e6b87d]/20 mb-3.5">
+      <div class="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-2xl bg-[#14080e]/85 border border-[#e6b87d]/20 mb-2.5">
         <button id="prev-level-btn" type="button" aria-label="Previous Level" class="p-2 rounded-full text-[#e6b87d] hover:bg-[#e6b87d]/15 disabled:opacity-30 transition">
           <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 18 9 12 15 6" />
@@ -226,7 +260,7 @@
         </button>
         <div class="text-center">
           <p id="selected-level-label" class="text-xs font-semibold uppercase tracking-[0.18em] text-[#fff5ef]">Level 1 • Awakening</p>
-          <p id="selected-level-meta" class="text-[11px] text-[#e6b87d]/80 mt-0.5">7 Embers • 2 Shadow Thorns</p>
+          <p id="selected-level-meta" class="text-[11px] text-[#e6b87d]/80 mt-0.5">6 Embers • 2 Shadow Thorns</p>
         </div>
         <button id="next-level-btn" type="button" aria-label="Next Level" class="p-2 rounded-full text-[#e6b87d] hover:bg-[#e6b87d]/15 disabled:opacity-30 transition">
           <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
@@ -235,23 +269,48 @@
         </button>
       </div>
 
-      <!-- Soundtrack Lounge Controls -->
-      <div class="rounded-2xl bg-[#14080e]/85 border border-[#e6b87d]/20 p-3 mb-4">
+      <!-- Unlockable Silk Ribbon Theme Selector -->
+      <div class="grid grid-cols-3 gap-1.5 p-1 rounded-2xl bg-[#14080e]/85 border border-[#e6b87d]/20 mb-3">
+        <button id="theme-btn-gold" type="button" data-theme="gold" class="py-1.5 px-2 rounded-xl text-[10px] uppercase tracking-[0.12em] font-medium bg-[#e6b87d]/20 text-[#fff5ef] transition truncate">
+          Champagne
+        </button>
+        <button id="theme-btn-rose" type="button" data-theme="rose" class="py-1.5 px-2 rounded-xl text-[10px] uppercase tracking-[0.12em] font-medium text-[#f7ece6]/50 transition truncate">
+          🔒 Lv 8 Rose
+        </button>
+        <button id="theme-btn-pearl" type="button" data-theme="pearl" class="py-1.5 px-2 rounded-xl text-[10px] uppercase tracking-[0.12em] font-medium text-[#f7ece6]/50 transition truncate">
+          🔒 Lv 16 Pearl
+        </button>
+      </div>
+
+      <!-- Soundtrack Lounge Controls with Spinning Vinyl Cover Art -->
+      <div class="rounded-2xl bg-[#14080e]/85 border border-[#e6b87d]/20 p-3 mb-3.5">
         <div class="flex items-center justify-between gap-2">
-          <button id="prev-track-btn" type="button" aria-label="Previous Track" class="p-2 rounded-full text-[#e6b87d]/80 hover:text-[#e6b87d] hover:bg-[#e6b87d]/10 transition shrink-0">
-            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+          <!-- Circular Vinyl Album Cover Art -->
+          <div id="vinyl-disc" class="w-9 h-9 rounded-full border border-[#e6b87d]/50 bg-[#1f0d16] relative overflow-hidden shrink-0 flex items-center justify-center shadow-md vinyl-spinning vinyl-paused">
+            <img id="vinyl-cover-img" alt="Cover" class="hidden w-full h-full object-cover" />
+            <svg id="vinyl-default-svg" viewBox="0 0 36 36" class="w-full h-full">
+              <circle cx="18" cy="18" r="17" fill="#1a0b12" stroke="#e6b87d" stroke-width="1" />
+              <circle cx="18" cy="18" r="12" fill="none" stroke="rgba(230,184,125,0.22)" stroke-width="0.8" />
+              <circle cx="18" cy="18" r="8" fill="none" stroke="rgba(230,184,125,0.28)" stroke-width="0.8" />
+              <circle cx="18" cy="18" r="4.5" fill="#e6b87d" />
+            </svg>
+            <span class="absolute w-1.5 h-1.5 rounded-full bg-[#0b0508] border border-[#e6b87d]/60"></span>
+          </div>
+
+          <button id="prev-track-btn" type="button" aria-label="Previous Track" class="p-1.5 rounded-full text-[#e6b87d]/80 hover:text-[#e6b87d] hover:bg-[#e6b87d]/10 transition shrink-0">
+            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="19 20 9 12 19 4 19 20" />
               <line x1="5" y1="19" x2="5" y2="5" />
             </svg>
           </button>
 
-          <button id="home-audio-btn" type="button" class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-full bg-[#e6b87d]/12 hover:bg-[#e6b87d]/20 text-[#e6b87d] text-xs transition min-w-0">
+          <button id="home-audio-btn" type="button" class="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-full bg-[#e6b87d]/12 hover:bg-[#e6b87d]/20 text-[#e6b87d] text-xs transition min-w-0">
             <span id="home-audio-dot" class="w-2 h-2 rounded-full bg-[#e6b87d]/40 shrink-0"></span>
             <span id="home-track-label" class="truncate">Play • I. Velvet Midnight</span>
           </button>
 
-          <button id="next-track-btn" type="button" aria-label="Next Track" class="p-2 rounded-full text-[#e6b87d]/80 hover:text-[#e6b87d] hover:bg-[#e6b87d]/10 transition shrink-0">
-            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+          <button id="next-track-btn" type="button" aria-label="Next Track" class="p-1.5 rounded-full text-[#e6b87d]/80 hover:text-[#e6b87d] hover:bg-[#e6b87d]/10 transition shrink-0">
+            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="5 4 15 12 5 20 5 4" />
               <line x1="19" y1="5" x2="19" y2="19" />
             </svg>
@@ -269,7 +328,7 @@
         </div>
 
         <div id="track-list-drawer" class="hidden mt-2 pt-2 border-t border-[#e6b87d]/15 space-y-2 text-left">
-          <div id="track-list-items" class="max-h-36 overflow-y-auto space-y-1 pr-1"></div>
+          <div id="track-list-items" class="max-h-32 overflow-y-auto space-y-1 pr-1"></div>
 
           <!-- Offline Device Audio Importer -->
           <div class="pt-1.5 border-t border-[#e6b87d]/10">
@@ -282,28 +341,177 @@
       </div>
 
       <!-- Primary Home Actions -->
-      <div class="flex flex-col gap-2.5">
+      <div class="flex flex-col gap-2">
         <button id="start-btn" type="button" class="gold-gradient-btn w-full py-3.5 rounded-full text-xs sm:text-sm font-semibold uppercase tracking-[0.18em]">
           Begin Level 1
         </button>
 
-        <button id="ambient-btn" type="button" class="w-full py-3 rounded-full border border-[#e6b87d]/30 text-[#f7ece6]/85 hover:bg-[#e6b87d]/10 text-xs uppercase tracking-[0.18em] transition">
+        <button id="ambient-btn" type="button" class="w-full py-2.5 rounded-full border border-[#e6b87d]/30 text-[#f7ece6]/85 hover:bg-[#e6b87d]/10 text-xs uppercase tracking-[0.18em] transition">
           Just Drift &amp; Listen
         </button>
 
-        <button id="view-invite-shortcut" type="button" class="hidden w-full py-3 rounded-full bg-[#e6b87d]/18 border border-[#e6b87d]/45 text-[#fff5ef] text-xs uppercase tracking-[0.18em] ring-aura transition">
+        <button id="view-invite-shortcut" type="button" class="hidden w-full py-2.5 rounded-full bg-[#e6b87d]/18 border border-[#e6b87d]/45 text-[#fff5ef] text-xs uppercase tracking-[0.18em] ring-aura transition">
           Open Unlocked Invitation
         </button>
       </div>
     </div>
   </section>
 
-  <!-- SCREEN 3: Level Cleared Transition Overlay -->
-  <section id="levelup-screen" class="overlay-layer overlay-hidden fixed inset-0 z-30 flex items-center justify-center p-5 bg-[radial-gradient(circle_at_center,rgba(34,13,22,0.78),rgba(11,5,8,0.95))]">
-    <div class="glass-card w-full max-w-sm rounded-3xl p-7 text-center">
+  <!-- SCREEN 2B: Keepsake Photos & Polaroid Memory Studio Modal -->
+  <section id="keepsake-screen" class="overlay-layer overlay-hidden fixed inset-0 z-40 flex items-center justify-center p-4 sm:p-5 bg-[radial-gradient(circle_at_center,rgba(26,10,18,0.88),rgba(11,5,8,0.97))] overflow-y-auto">
+    <div class="glass-card w-full max-w-md rounded-3xl p-5 sm:p-6 text-left my-auto">
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-[#e6b87d]/15">
+        <div>
+          <p class="uppercase tracking-[0.22em] text-[10px] text-[#e6b87d]">Offline Keepsake Vault</p>
+          <h3 class="font-serif-editorial text-2xl text-[#fff5ef]">Personal Photos &amp; Memories</h3>
+        </div>
+        <button id="close-keepsake-btn" type="button" class="p-2 rounded-full border border-[#e6b87d]/25 text-[#e6b87d] hover:bg-[#e6b87d]/15 text-xs">
+          ✕
+        </button>
+      </div>
+
+      <p class="text-xs text-[#f7ece6]/70 leading-relaxed mb-3.5">
+        Attach photos from your phone to illuminate behind the stars as levels are cleared, spin on the vinyl player, and appear as Polaroid memories at milestone chapters.
+      </p>
+
+      <input id="keepsake-photo-input" type="file" accept="image/*" class="hidden" />
+
+      <div id="keepsake-scroll" class="max-h-[55vh] overflow-y-auto space-y-2.5 pr-1">
+        <!-- Slot 1: Constellation Background Reveal -->
+        <div class="p-3 rounded-2xl bg-[#14080e]/90 border border-[#e6b87d]/20 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <img id="thumb-constellation_bg" alt="" class="hidden w-11 h-11 rounded-xl object-cover border border-[#e6b87d]/40 shrink-0" />
+            <div id="placeholder-constellation_bg" class="w-11 h-11 rounded-xl bg-[#e6b87d]/10 border border-[#e6b87d]/20 flex items-center justify-center text-[#e6b87d] text-xs shrink-0">★</div>
+            <div class="min-w-0">
+              <p class="text-xs font-medium text-[#fff5ef] truncate">Constellation Backdrop</p>
+              <p class="text-[10px] text-[#f7ece6]/55 truncate">Illuminates slowly across all 50 levels</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" data-photo-slot="constellation_bg" class="pick-photo-btn px-2.5 py-1.5 rounded-xl bg-[#e6b87d]/18 text-[#e6b87d] text-[10px] uppercase tracking-wider">Choose</button>
+            <button type="button" data-clear-slot="constellation_bg" class="clear-photo-btn hidden px-2 py-1.5 rounded-xl text-[#d9536f] hover:bg-[#d9536f]/15 text-xs">×</button>
+          </div>
+        </div>
+
+        <!-- Slot 2: Vinyl Album Cover -->
+        <div class="p-3 rounded-2xl bg-[#14080e]/90 border border-[#e6b87d]/20 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <img id="thumb-album_cover" alt="" class="hidden w-11 h-11 rounded-full object-cover border border-[#e6b87d]/40 shrink-0" />
+            <div id="placeholder-album_cover" class="w-11 h-11 rounded-full bg-[#e6b87d]/10 border border-[#e6b87d]/20 flex items-center justify-center text-[#e6b87d] text-xs shrink-0">♫</div>
+            <div class="min-w-0">
+              <p class="text-xs font-medium text-[#fff5ef] truncate">Vinyl Cover Art</p>
+              <p class="text-[10px] text-[#f7ece6]/55 truncate">Spins inside the Soundtrack Lounge</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" data-photo-slot="album_cover" class="pick-photo-btn px-2.5 py-1.5 rounded-xl bg-[#e6b87d]/18 text-[#e6b87d] text-[10px] uppercase tracking-wider">Choose</button>
+            <button type="button" data-clear-slot="album_cover" class="clear-photo-btn hidden px-2 py-1.5 rounded-xl text-[#d9536f] hover:bg-[#d9536f]/15 text-xs">×</button>
+          </div>
+        </div>
+
+        <!-- Milestone Polaroid Slots (Levels 5, 10, 15, 20, 25, 35, 45) -->
+        <div class="p-3 rounded-2xl bg-[#14080e]/90 border border-[#e6b87d]/20 space-y-2">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <img id="thumb-chapter_1" alt="" class="hidden w-11 h-11 rounded-xl object-cover border border-[#e6b87d]/40 shrink-0" />
+              <div id="placeholder-chapter_1" class="w-11 h-11 rounded-xl bg-[#e6b87d]/10 border border-[#e6b87d]/20 flex items-center justify-center text-[#e6b87d] text-[10px] shrink-0">Lv 5</div>
+              <div class="min-w-0">
+                <p class="text-xs font-medium text-[#fff5ef] truncate">Chapter I Polaroid (Level 5)</p>
+                <p class="text-[10px] text-[#f7ece6]/55 truncate">Revealed after clearing Tier I</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" data-photo-slot="chapter_1" class="pick-photo-btn px-2.5 py-1.5 rounded-xl bg-[#e6b87d]/18 text-[#e6b87d] text-[10px] uppercase tracking-wider">Photo</button>
+              <button type="button" data-clear-slot="chapter_1" class="clear-photo-btn hidden px-2 py-1.5 rounded-xl text-[#d9536f] hover:bg-[#d9536f]/15 text-xs">×</button>
+            </div>
+          </div>
+          <input id="caption-chapter_1" type="text" maxlength="90" placeholder="Chapter I caption..." class="chapter-caption-input w-full px-3 py-1.5 rounded-xl bg-[#0b0508]/80 border border-[#e6b87d]/15 text-xs text-[#fff5ef] placeholder-[#f7ece6]/30 focus:outline-none focus:border-[#e6b87d]" />
+        </div>
+
+        <div class="p-3 rounded-2xl bg-[#14080e]/90 border border-[#e6b87d]/20 space-y-2">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <img id="thumb-chapter_2" alt="" class="hidden w-11 h-11 rounded-xl object-cover border border-[#e6b87d]/40 shrink-0" />
+              <div id="placeholder-chapter_2" class="w-11 h-11 rounded-xl bg-[#e6b87d]/10 border border-[#e6b87d]/20 flex items-center justify-center text-[#e6b87d] text-[10px] shrink-0">Lv 15</div>
+              <div class="min-w-0">
+                <p class="text-xs font-medium text-[#fff5ef] truncate">Chapter II Polaroid (Level 15)</p>
+                <p class="text-[10px] text-[#f7ece6]/55 truncate">Revealed after clearing Tier III</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" data-photo-slot="chapter_2" class="pick-photo-btn px-2.5 py-1.5 rounded-xl bg-[#e6b87d]/18 text-[#e6b87d] text-[10px] uppercase tracking-wider">Photo</button>
+              <button type="button" data-clear-slot="chapter_2" class="clear-photo-btn hidden px-2 py-1.5 rounded-xl text-[#d9536f] hover:bg-[#d9536f]/15 text-xs">×</button>
+            </div>
+          </div>
+          <input id="caption-chapter_2" type="text" maxlength="90" placeholder="Chapter II caption..." class="chapter-caption-input w-full px-3 py-1.5 rounded-xl bg-[#0b0508]/80 border border-[#e6b87d]/15 text-xs text-[#fff5ef] placeholder-[#f7ece6]/30 focus:outline-none focus:border-[#e6b87d]" />
+        </div>
+
+        <div class="p-3 rounded-2xl bg-[#14080e]/90 border border-[#e6b87d]/20 space-y-2">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <img id="thumb-chapter_3" alt="" class="hidden w-11 h-11 rounded-xl object-cover border border-[#e6b87d]/40 shrink-0" />
+              <div id="placeholder-chapter_3" class="w-11 h-11 rounded-xl bg-[#e6b87d]/10 border border-[#e6b87d]/20 flex items-center justify-center text-[#e6b87d] text-[10px] shrink-0">Lv 25</div>
+              <div class="min-w-0">
+                <p class="text-xs font-medium text-[#fff5ef] truncate">Chapter III Polaroid (Level 25)</p>
+                <p class="text-[10px] text-[#f7ece6]/55 truncate">Halfway milestone keepsake</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" data-photo-slot="chapter_3" class="pick-photo-btn px-2.5 py-1.5 rounded-xl bg-[#e6b87d]/18 text-[#e6b87d] text-[10px] uppercase tracking-wider">Photo</button>
+              <button type="button" data-clear-slot="chapter_3" class="clear-photo-btn hidden px-2 py-1.5 rounded-xl text-[#d9536f] hover:bg-[#d9536f]/15 text-xs">×</button>
+            </div>
+          </div>
+          <input id="caption-chapter_3" type="text" maxlength="90" placeholder="Chapter III caption..." class="chapter-caption-input w-full px-3 py-1.5 rounded-xl bg-[#0b0508]/80 border border-[#e6b87d]/15 text-xs text-[#fff5ef] placeholder-[#f7ece6]/30 focus:outline-none focus:border-[#e6b87d]" />
+        </div>
+
+        <div class="p-3 rounded-2xl bg-[#14080e]/90 border border-[#e6b87d]/20 space-y-2">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <img id="thumb-chapter_4" alt="" class="hidden w-11 h-11 rounded-xl object-cover border border-[#e6b87d]/40 shrink-0" />
+              <div id="placeholder-chapter_4" class="w-11 h-11 rounded-xl bg-[#e6b87d]/10 border border-[#e6b87d]/20 flex items-center justify-center text-[#e6b87d] text-[10px] shrink-0">Lv 40</div>
+              <div class="min-w-0">
+                <p class="text-xs font-medium text-[#fff5ef] truncate">Chapter IV Polaroid (Level 40)</p>
+                <p class="text-[10px] text-[#f7ece6]/55 truncate">Revealed before the final tier</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" data-photo-slot="chapter_4" class="pick-photo-btn px-2.5 py-1.5 rounded-xl bg-[#e6b87d]/18 text-[#e6b87d] text-[10px] uppercase tracking-wider">Photo</button>
+              <button type="button" data-clear-slot="chapter_4" class="clear-photo-btn hidden px-2 py-1.5 rounded-xl text-[#d9536f] hover:bg-[#d9536f]/15 text-xs">×</button>
+            </div>
+          </div>
+          <input id="caption-chapter_4" type="text" maxlength="90" placeholder="Chapter IV caption..." class="chapter-caption-input w-full px-3 py-1.5 rounded-xl bg-[#0b0508]/80 border border-[#e6b87d]/15 text-xs text-[#fff5ef] placeholder-[#f7ece6]/30 focus:outline-none focus:border-[#e6b87d]" />
+        </div>
+      </div>
+
+      <button id="save-keepsakes-btn" type="button" class="gold-gradient-btn w-full py-3 rounded-full text-xs font-semibold uppercase tracking-[0.18em] mt-4">
+        Save Memories &amp; Return
+      </button>
+    </div>
+  </section>
+
+  <!-- SCREEN 3: Level Cleared Transition Overlay (With Interactive 3D Polaroid Card on Milestones) -->
+  <section id="levelup-screen" class="overlay-layer overlay-hidden fixed inset-0 z-30 flex items-center justify-center p-5 bg-[radial-gradient(circle_at_center,rgba(34,13,22,0.78),rgba(11,5,8,0.95))] overflow-y-auto">
+    <div class="glass-card w-full max-w-sm rounded-3xl p-6 sm:p-7 text-center my-auto">
       <p id="levelup-tier-info" class="uppercase tracking-[0.24em] text-[10px] text-[#e6b87d] mb-2">Tier I • Complete</p>
       <h2 id="levelup-title" class="font-serif-editorial text-3xl text-[#fff5ef] mb-2">Constellation Woven</h2>
-      <p id="levelup-subtitle" class="text-xs sm:text-sm text-[#f7ece6]/75 leading-relaxed mb-6">
+
+      <!-- Interactive Tilt Polaroid Memory Card (Shown at Levels 5, 10, 15, 20, 25, 30, 35, 40, 45) -->
+      <div id="polaroid-wrapper" class="hidden my-4 flex justify-center" style="perspective: 700px;">
+        <div id="polaroid-card" class="polaroid-card w-60 p-2.5 pb-4 rounded-sm text-center">
+          <div class="w-full h-44 bg-[#190c12] overflow-hidden relative flex items-center justify-center">
+            <img id="polaroid-img" alt="Memory" class="hidden w-full h-full object-cover" />
+            <div id="polaroid-fallback-art" class="p-4 text-center">
+              <span class="block text-[#e6b87d] text-xl mb-1">✦</span>
+              <span class="font-serif-editorial italic text-sm text-[#f7ece6]/85">A Chapter Woven in Gold</span>
+            </div>
+          </div>
+          <p id="polaroid-caption" class="font-serif-editorial italic text-base text-[#2b141e] mt-2.5 px-1 leading-snug">
+            “Every thread brings me closer to you.”
+          </p>
+        </div>
+      </div>
+
+      <p id="levelup-subtitle" class="text-xs sm:text-sm text-[#f7ece6]/75 leading-relaxed mb-5">
         The silk thread grows stronger. Step forward into the next chapter.
       </p>
 
@@ -327,7 +535,7 @@
         A shadow thorn pierced the ribbon before the constellation was complete.
       </p>
       <p id="fail-stats" class="text-[11px] uppercase tracking-[0.18em] text-[#e6b87d]/85 mb-6">
-        Woven: 0 / 7 Embers
+        Woven: 0 / 6 Embers
       </p>
 
       <div class="flex flex-col gap-2.5">
@@ -344,7 +552,40 @@
   <!-- SCREEN 5: Unlocked Promise Ring Invitation -->
   <section id="invite-screen" class="overlay-layer overlay-hidden fixed inset-0 z-30 flex items-center justify-center p-5 bg-[radial-gradient(circle_at_center,rgba(36,14,22,0.72),rgba(11,5,8,0.95))] overflow-y-auto">
     <div class="glass-card ring-aura w-full max-w-md rounded-3xl p-7 sm:p-8 text-center my-auto">
-      <p class="uppercase tracking-[0.28em] text-[11px] text-[#e6b87d] mb-2">All 25 Constellations Complete</p>
+      <!-- Audio-Reactive Animated Promise Ring Illustration -->
+      <div class="flex justify-center mb-2">
+        <svg id="invite-ring-svg" viewBox="0 0 120 110" class="w-20 h-20 overflow-visible" style="transition: transform 0.12s ease-out;">
+          <defs>
+            <linearGradient id="goldBandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fff0d4" />
+              <stop offset="45%" stop-color="#e6b87d" />
+              <stop offset="100%" stop-color="#b57c42" />
+            </linearGradient>
+            <linearGradient id="diamondGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="55%" stop-color="#fff3dc" />
+              <stop offset="100%" stop-color="#e6b87d" />
+            </linearGradient>
+          </defs>
+          <!-- Outer Shimmer Halo -->
+          <circle cx="60" cy="64" r="36" fill="none" stroke="rgba(230,184,125,0.22)" stroke-width="1" stroke-dasharray="3 4" />
+          <!-- Intertwined Gold Band -->
+          <circle cx="60" cy="64" r="28" fill="none" stroke="url(#goldBandGrad)" stroke-width="5.5" />
+          <ellipse cx="60" cy="64" rx="28" ry="25" fill="none" stroke="rgba(255,248,236,0.45)" stroke-width="1" />
+          <!-- Prongs & Faceted Solitaire Diamond -->
+          <polygon points="60,14 73,26 60,37 47,26" fill="url(#diamondGrad)" stroke="#e6b87d" stroke-width="1.4" />
+          <polyline points="47,26 60,26 73,26" fill="none" stroke="rgba(181,124,66,0.55)" stroke-width="1" />
+          <line x1="60" y1="14" x2="60" y2="37" stroke="rgba(255,255,255,0.85)" stroke-width="1" />
+          <!-- Diamond Sparkle Rays -->
+          <g id="invite-diamond-glint" style="transform-origin: 60px 25px;">
+            <line x1="60" y1="4" x2="60" y2="10" stroke="#fff8ec" stroke-width="1.5" stroke-linecap="round" />
+            <line x1="41" y1="16" x2="45" y2="20" stroke="#fff8ec" stroke-width="1.3" stroke-linecap="round" />
+            <line x1="79" y1="16" x2="75" y2="20" stroke="#fff8ec" stroke-width="1.3" stroke-linecap="round" />
+          </g>
+        </svg>
+      </div>
+
+      <p class="uppercase tracking-[0.28em] text-[11px] text-[#e6b87d] mb-1.5">All 50 Constellations Complete</p>
       <h2 class="font-serif-editorial text-3xl sm:text-4xl text-[#fff5ef] mb-3">The Promise</h2>
       <div class="w-16 h-px bg-gradient-to-r from-transparent via-[#e6b87d] to-transparent mx-auto mb-5"></div>
 
@@ -385,6 +626,15 @@
   <!-- SCREEN 6: Live Event Countdown Screen -->
   <section id="countdown-screen" class="overlay-layer overlay-hidden fixed inset-0 z-30 flex items-center justify-center p-5 bg-[radial-gradient(circle_at_center,rgba(36,14,22,0.72),rgba(11,5,8,0.95))] overflow-y-auto">
     <div class="glass-card ring-aura w-full max-w-md rounded-3xl p-7 sm:p-8 text-center my-auto">
+      <!-- Mini Audio-Reactive Promise Ring -->
+      <div class="flex justify-center mb-2">
+        <svg id="cd-ring-svg" viewBox="0 0 120 110" class="w-16 h-16 overflow-visible" style="transition: transform 0.12s ease-out;">
+          <circle cx="60" cy="64" r="28" fill="none" stroke="url(#goldBandGrad)" stroke-width="5.5" />
+          <polygon points="60,14 73,26 60,37 47,26" fill="url(#diamondGrad)" stroke="#e6b87d" stroke-width="1.4" />
+          <line x1="60" y1="4" x2="60" y2="10" stroke="#fff8ec" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
+      </div>
+
       <p id="cd-status-label" class="uppercase tracking-[0.28em] text-[11px] text-[#e6b87d] mb-2">Counting Every Moment</p>
       <h2 class="font-serif-editorial text-3xl sm:text-4xl text-[#fff5ef] mb-2">Until Our Promise</h2>
       <p class="text-xs text-[#f7ece6]/70 tracking-wide mb-5">
@@ -463,6 +713,7 @@
     const introScreen = document.getElementById('intro-screen');
     const homeWelcomeUser = document.getElementById('home-welcome-user');
     const switchUserBtn = document.getElementById('switch-user-btn');
+    const openKeepsakeBtn = document.getElementById('open-keepsake-btn');
     const homeBestBadge = document.getElementById('home-best-badge');
     const homeTierDesc = document.getElementById('home-tier-desc');
     const prevLevelBtn = document.getElementById('prev-level-btn');
@@ -473,7 +724,21 @@
     const ambientBtn = document.getElementById('ambient-btn');
     const viewInviteShortcut = document.getElementById('view-invite-shortcut');
 
-    // Home Soundtrack Controls
+    // Ribbon Theme Buttons
+    const themeBtnGold = document.getElementById('theme-btn-gold');
+    const themeBtnRose = document.getElementById('theme-btn-rose');
+    const themeBtnPearl = document.getElementById('theme-btn-pearl');
+
+    // Keepsake Modal Elements
+    const keepsakeScreen = document.getElementById('keepsake-screen');
+    const closeKeepsakeBtn = document.getElementById('close-keepsake-btn');
+    const saveKeepsakesBtn = document.getElementById('save-keepsakes-btn');
+    const keepsakePhotoInput = document.getElementById('keepsake-photo-input');
+
+    // Home Soundtrack & Vinyl Cover Controls
+    const vinylDisc = document.getElementById('vinyl-disc');
+    const vinylCoverImg = document.getElementById('vinyl-cover-img');
+    const vinylDefaultSvg = document.getElementById('vinyl-default-svg');
     const prevTrackBtn = document.getElementById('prev-track-btn');
     const homeAudioBtn = document.getElementById('home-audio-btn');
     const homeAudioDot = document.getElementById('home-audio-dot');
@@ -487,10 +752,15 @@
     const addMusicBtn = document.getElementById('add-music-btn');
     const customAudioInput = document.getElementById('custom-audio-input');
 
-    // Level Up / Fail / Invite Screens
+    // Level Up / Polaroid / Fail / Invite Screens
     const levelupScreen = document.getElementById('levelup-screen');
     const levelupTierInfo = document.getElementById('levelup-tier-info');
     const levelupTitle = document.getElementById('levelup-title');
+    const polaroidWrapper = document.getElementById('polaroid-wrapper');
+    const polaroidCard = document.getElementById('polaroid-card');
+    const polaroidImg = document.getElementById('polaroid-img');
+    const polaroidFallbackArt = document.getElementById('polaroid-fallback-art');
+    const polaroidCaption = document.getElementById('polaroid-caption');
     const levelupSubtitle = document.getElementById('levelup-subtitle');
     const nextLevelBtnModal = document.getElementById('next-level-btn-modal');
     const levelupHomeBtn = document.getElementById('levelup-home-btn');
@@ -503,10 +773,13 @@
     const failHomeBtn = document.getElementById('fail-home-btn');
 
     const inviteScreen = document.getElementById('invite-screen');
+    const inviteRingSvg = document.getElementById('invite-ring-svg');
+    const inviteDiamondGlint = document.getElementById('invite-diamond-glint');
     const countdownBtn = document.getElementById('countdown-btn');
     const inviteHomeBtn = document.getElementById('invite-home-btn');
 
     const countdownScreen = document.getElementById('countdown-screen');
+    const cdRingSvg = document.getElementById('cd-ring-svg');
     const cdStatusLabel = document.getElementById('cd-status-label');
     const cdDays = document.getElementById('cd-days');
     const cdHours = document.getElementById('cd-hours');
@@ -519,7 +792,227 @@
     let height = (canvas.height = window.innerHeight);
 
     /* ==========================================================================
-       2. MULTI-INSTRUMENT NEO-SOUL ENGINE (15 Distinct Tracks + Device MP3 Import)
+       2. OFFLINE KEEPSAKE PHOTO & CAPTION STORAGE (IndexedDB + Canvas Compression)
+       ========================================================================== */
+    const KEEPSAKE_DB_NAME = 'promise_invite_keepsakes_v1';
+    const KEEPSAKE_STORE_NAME = 'photos';
+    const DEFAULT_CHAPTER_CAPTIONS = {
+      chapter_1: '“Chapter I — Where the first golden thread began to glow.”',
+      chapter_2: '“Chapter II — Every quiet moment with you feels effortless.”',
+      chapter_3: '“Chapter III — Halfway through the stars, still choosing you.”',
+      chapter_4: '“Chapter IV — Almost at the promise waiting for us.”'
+    };
+
+    const keepsakeData = {
+      constellation_bg: { dataUrl: null, img: null },
+      album_cover: { dataUrl: null, img: null },
+      chapter_1: { dataUrl: null, img: null, caption: DEFAULT_CHAPTER_CAPTIONS.chapter_1 },
+      chapter_2: { dataUrl: null, img: null, caption: DEFAULT_CHAPTER_CAPTIONS.chapter_2 },
+      chapter_3: { dataUrl: null, img: null, caption: DEFAULT_CHAPTER_CAPTIONS.chapter_3 },
+      chapter_4: { dataUrl: null, img: null, caption: DEFAULT_CHAPTER_CAPTIONS.chapter_4 }
+    };
+
+    let pendingPhotoSlot = null;
+
+    function openKeepsakeDB() {
+      return new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+          reject(new Error('IndexedDB unavailable'));
+          return;
+        }
+        const req = window.indexedDB.open(KEEPSAKE_DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(KEEPSAKE_STORE_NAME)) {
+            db.createObjectStore(KEEPSAKE_STORE_NAME, { keyPath: 'slot' });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function hydrateImageElement(slot, dataUrl) {
+      if (!dataUrl) {
+        keepsakeData[slot].img = null;
+        return;
+      }
+      const image = new Image();
+      image.onload = () => {
+        keepsakeData[slot].img = image;
+        refreshKeepsakeUI();
+      };
+      image.src = dataUrl;
+    }
+
+    async function loadKeepsakesFromDB() {
+      try {
+        const db = await openKeepsakeDB();
+        const records = await new Promise((resolve, reject) => {
+          const tx = db.transaction(KEEPSAKE_STORE_NAME, 'readonly');
+          const req = tx.objectStore(KEEPSAKE_STORE_NAME).getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+        records.forEach((rec) => {
+          if (keepsakeData[rec.slot]) {
+            keepsakeData[rec.slot].dataUrl = rec.dataUrl || null;
+            if (rec.caption !== undefined) {
+              keepsakeData[rec.slot].caption = rec.caption;
+            }
+            if (rec.dataUrl) {
+              hydrateImageElement(rec.slot, rec.dataUrl);
+            }
+          }
+        });
+      } catch {
+        // Safe fallback if IndexedDB unavailable
+      }
+      refreshKeepsakeUI();
+    }
+
+    async function persistKeepsakeSlot(slot) {
+      const entry = keepsakeData[slot];
+      if (!entry) return;
+      try {
+        const db = await openKeepsakeDB();
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(KEEPSAKE_STORE_NAME, 'readwrite');
+          const req = tx.objectStore(KEEPSAKE_STORE_NAME).put({
+            slot,
+            dataUrl: entry.dataUrl || null,
+            caption: entry.caption || ''
+          });
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      } catch {
+        // Ignore storage quota error
+      }
+    }
+
+    function compressImageFileToDataUrl(file, maxDim = 1080) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width;
+            let h = img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+              }
+            }
+            const off = document.createElement('canvas');
+            off.width = w;
+            off.height = h;
+            const octx = off.getContext('2d');
+            octx.drawImage(img, 0, 0, w, h);
+            resolve(off.toDataURL('image/jpeg', 0.82));
+          };
+          img.onerror = reject;
+          img.src = ev.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function refreshKeepsakeUI() {
+      // Update Vinyl Cover Art on Home Screen
+      if (keepsakeData.album_cover.dataUrl) {
+        vinylCoverImg.src = keepsakeData.album_cover.dataUrl;
+        vinylCoverImg.classList.remove('hidden');
+        vinylDefaultSvg.classList.add('hidden');
+      } else {
+        vinylCoverImg.classList.add('hidden');
+        vinylDefaultSvg.classList.remove('hidden');
+      }
+
+      // Update Thumbnails & Captions inside Keepsake Modal
+      Object.keys(keepsakeData).forEach((slot) => {
+        const thumb = document.getElementById(`thumb-${slot}`);
+        const placeholder = document.getElementById(`placeholder-${slot}`);
+        const clearBtn = document.querySelector(`[data-clear-slot="${slot}"]`);
+        const capInput = document.getElementById(`caption-${slot}`);
+
+        if (thumb && placeholder) {
+          if (keepsakeData[slot].dataUrl) {
+            thumb.src = keepsakeData[slot].dataUrl;
+            thumb.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            if (clearBtn) clearBtn.classList.remove('hidden');
+          } else {
+            thumb.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            if (clearBtn) clearBtn.classList.add('hidden');
+          }
+        }
+        if (capInput && keepsakeData[slot].caption !== undefined) {
+          capInput.value = keepsakeData[slot].caption;
+        }
+      });
+    }
+
+    document.querySelectorAll('.pick-photo-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        pendingPhotoSlot = btn.getAttribute('data-photo-slot');
+        keepsakePhotoInput.click();
+      });
+    });
+
+    document.querySelectorAll('.clear-photo-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const slot = btn.getAttribute('data-clear-slot');
+        if (!keepsakeData[slot]) return;
+        keepsakeData[slot].dataUrl = null;
+        keepsakeData[slot].img = null;
+        await persistKeepsakeSlot(slot);
+        refreshKeepsakeUI();
+      });
+    });
+
+    keepsakePhotoInput.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file || !pendingPhotoSlot) return;
+      try {
+        const dataUrl = await compressImageFileToDataUrl(file, pendingPhotoSlot === 'album_cover' ? 512 : 1080);
+        keepsakeData[pendingPhotoSlot].dataUrl = dataUrl;
+        hydrateImageElement(pendingPhotoSlot, dataUrl);
+        await persistKeepsakeSlot(pendingPhotoSlot);
+        refreshKeepsakeUI();
+      } catch {
+        // Ignore invalid image
+      }
+      e.target.value = '';
+    });
+
+    openKeepsakeBtn.addEventListener('click', () => {
+      refreshKeepsakeUI();
+      setOverlayVisibility(keepsakeScreen);
+    });
+
+    async function closeAndSaveKeepsakes() {
+      ['chapter_1', 'chapter_2', 'chapter_3', 'chapter_4'].forEach((slot) => {
+        const inp = document.getElementById(`caption-${slot}`);
+        if (inp) {
+          keepsakeData[slot].caption = inp.value.trim() || DEFAULT_CHAPTER_CAPTIONS[slot];
+          persistKeepsakeSlot(slot);
+        }
+      });
+      setOverlayVisibility(introScreen);
+    }
+
+    closeKeepsakeBtn.addEventListener('click', closeAndSaveKeepsakes);
+    saveKeepsakesBtn.addEventListener('click', closeAndSaveKeepsakes);
+
+    /* ==========================================================================
+       3. MULTI-INSTRUMENT NEO-SOUL ENGINE (15 Distinct Tracks + Device MP3 Import)
        ========================================================================== */
     let audioCtx = null;
     let masterGain = null;
@@ -546,16 +1039,16 @@
         filterHz: 880,
         drums: 'soft-pulse',
         verseChords: [
-          [174.61, 220.00, 261.63, 329.63, 392.00], // Fmaj9
-          [164.81, 196.00, 246.94, 293.66, 392.00], // Em7
-          [146.83, 174.61, 220.00, 261.63, 329.63], // Dm9
-          [130.81, 196.00, 246.94, 293.66, 329.63]  // Cmaj9
+          [174.61, 220.00, 261.63, 329.63, 392.00],
+          [164.81, 196.00, 246.94, 293.66, 392.00],
+          [146.83, 174.61, 220.00, 261.63, 329.63],
+          [130.81, 196.00, 246.94, 293.66, 329.63]
         ],
         bridgeChords: [
-          [220.00, 261.63, 329.63, 392.00, 493.88], // Am9
-          [146.83, 220.00, 261.63, 329.63, 349.23], // Dm11
-          [196.00, 246.94, 293.66, 349.23, 440.00], // G13
-          [130.81, 164.81, 246.94, 293.66, 392.00]  // Cmaj9
+          [220.00, 261.63, 329.63, 392.00, 493.88],
+          [146.83, 220.00, 261.63, 329.63, 349.23],
+          [196.00, 246.94, 293.66, 349.23, 440.00],
+          [130.81, 164.81, 246.94, 293.66, 392.00]
         ]
       },
       {
@@ -575,7 +1068,7 @@
           [207.65, 261.63, 311.13, 392.00, 466.16],
           [196.00, 233.08, 293.66, 349.23, 440.00],
           [174.61, 207.65, 261.63, 311.13, 392.00],
-          [116.54, 174.61, 233.08, 293.66, 392.00]
+          [116.54, 174.61, 233.08, 261.63, 392.00]
         ]
       },
       {
@@ -594,7 +1087,7 @@
         bridgeChords: [
           [146.83, 174.61, 220.00, 261.63, 329.63],
           [164.81, 196.00, 246.94, 293.66, 392.00],
-          [174.61, 220.00, 246.94, 329.63, 392.00],
+          [174.61, 220.00, 261.63, 329.63, 392.00],
           [164.81, 207.65, 246.94, 293.66, 349.23]
         ]
       },
@@ -832,7 +1325,7 @@
           [196.00, 246.94, 293.66, 349.23, 440.00]
         ],
         bridgeChords: [
-          [164.81, 196.00, 246.94, 293.66, 369.99],
+          [164.81, 196.00, 246.94, 369.99, 369.99],
           [220.00, 261.63, 329.63, 392.00, 440.00],
           [146.83, 174.61, 220.00, 261.63, 329.63],
           [196.00, 246.94, 293.66, 349.23, 440.00]
@@ -844,9 +1337,6 @@
       return [...BUILTIN_TRACKS, ...customTracks];
     }
 
-    /* ==========================================================================
-       2B. OFFLINE CUSTOM AUDIO STORAGE (IndexedDB)
-       ========================================================================== */
     const AUDIO_DB_NAME = 'promise_invite_audio_v1';
     const AUDIO_STORE_NAME = 'custom_tracks';
 
@@ -886,7 +1376,7 @@
         }));
         syncAudioLabels();
       } catch {
-        // Ignore if IndexedDB is blocked in private mode
+        // Ignore if IndexedDB is blocked
       }
     }
 
@@ -920,7 +1410,7 @@
             req.onerror = () => reject(req.error);
           });
         } catch {
-          // Remains in memory for current session
+          // Remains in memory
         }
       }
 
@@ -1011,6 +1501,7 @@
         audioDot.style.opacity = '0.35';
         homeAudioDot.classList.remove('animate-pulse');
         homeAudioDot.style.backgroundColor = 'rgba(230, 184, 125, 0.35)';
+        vinylDisc.classList.add('vinyl-paused');
         homeTrackLabel.textContent = playlistStarted
           ? `${trackCounter} • ${currentName} (Paused)`
           : `Play • ${currentName}`;
@@ -1019,6 +1510,7 @@
         audioDot.style.opacity = '1';
         homeAudioDot.classList.add('animate-pulse');
         homeAudioDot.style.backgroundColor = '#e6b87d';
+        vinylDisc.classList.remove('vinyl-paused');
         homeTrackLabel.textContent = `${trackCounter} • ${currentName}`;
       }
 
@@ -1247,7 +1739,6 @@
       });
     }
 
-    // Harmonic Chime Progression (scales pitch and adds a harmonic fifth on combos)
     function playChimeNote(combo = 1) {
       if (!audioCtx || isMuted) return;
       const now = audioCtx.currentTime;
@@ -1270,7 +1761,6 @@
       osc.start(now);
       osc.stop(now + 1.2);
 
-      // Add a shimmering harmonic overtone when in combo
       if (combo >= 2) {
         const harmOsc = audioCtx.createOscillator();
         const harmGain = audioCtx.createGain();
@@ -1288,7 +1778,6 @@
       }
     }
 
-    // Subtle crystalline sparkle when grazing past a thorn
     function playNearMissSpark() {
       if (!audioCtx || isMuted) return;
       const now = audioCtx.currentTime;
@@ -1541,7 +2030,7 @@
     }
 
     /* ==========================================================================
-       3. LOCAL PROFILE & 25-LEVEL PROGRESSION STORAGE (IndexedDB + Memory Fallback)
+       4. LOCAL PROFILE, RIBBON THEMES & 50-LEVEL PROGRESSION STORAGE
        ========================================================================== */
     const PROFILE_DB_NAME = 'promise_invite_profiles_v1';
     const PROFILE_STORE_NAME = 'users';
@@ -1549,7 +2038,8 @@
     let currentUser = null;
     let authMode = 'signin';
     let selectedLevel = 1;
-    const MAX_LEVELS = 25;
+    let activeRibbonTheme = 'gold'; // 'gold' | 'rose' | 'pearl'
+    const MAX_LEVELS = 50;
 
     function openProfileDB() {
       return new Promise((resolve, reject) => {
@@ -1673,6 +2163,7 @@
           highestUnlockedLevel: 1,
           completedLevels: 0,
           inviteUnlocked: false,
+          activeRibbonTheme: 'gold',
           updatedAt: Date.now()
         };
         await saveStoredProfile(newProfile);
@@ -1695,7 +2186,7 @@
       if (profiles.length > 0) {
         profiles.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
         const latest = profiles[0];
-        quickContinueBtn.textContent = `Continue as ${latest.username} (Level ${latest.highestUnlockedLevel}/25)`;
+        quickContinueBtn.textContent = `Continue as ${latest.username} (Level ${latest.highestUnlockedLevel}/${MAX_LEVELS})`;
         quickContinueBtn.classList.remove('hidden');
         quickContinueBtn.onclick = () => {
           authUsername.value = latest.username;
@@ -1704,24 +2195,81 @@
       }
     }
 
-    function loginWithProfile(profile) {
+    async function loginWithProfile(profile) {
+      if ((profile.completedLevels || 0) >= 25 && (profile.highestUnlockedLevel || 1) === 25) {
+        profile.highestUnlockedLevel = 26;
+        await saveStoredProfile(profile);
+      }
       currentUser = profile;
+      activeRibbonTheme = profile.activeRibbonTheme || 'gold';
       selectedLevel = Math.min(MAX_LEVELS, Math.max(1, profile.highestUnlockedLevel || 1));
       initAmbientSynth();
       showHomeScreen();
     }
 
+    function updateRibbonThemeButtons() {
+      const maxLvl = currentUser ? Math.max(1, currentUser.highestUnlockedLevel || 1) : 1;
+      const roseUnlocked = maxLvl >= 8;
+      const pearlUnlocked = maxLvl >= 16;
+
+      if (!roseUnlocked && activeRibbonTheme === 'rose') activeRibbonTheme = 'gold';
+      if (!pearlUnlocked && activeRibbonTheme === 'pearl') activeRibbonTheme = 'gold';
+
+      themeBtnGold.textContent = 'Champagne';
+      themeBtnRose.textContent = roseUnlocked ? 'Rose Velvet' : '🔒 Lv 8 Rose';
+      themeBtnPearl.textContent = pearlUnlocked ? 'Starlight' : '🔒 Lv 16 Pearl';
+
+      const activeClass = 'py-1.5 px-2 rounded-xl text-[10px] uppercase tracking-[0.12em] font-medium bg-[#e6b87d]/25 text-[#fff5ef] border border-[#e6b87d]/40 transition truncate';
+      const unlockedClass = 'py-1.5 px-2 rounded-xl text-[10px] uppercase tracking-[0.12em] font-medium text-[#f7ece6]/70 hover:bg-white/5 transition truncate';
+      const lockedClass = 'py-1.5 px-2 rounded-xl text-[10px] uppercase tracking-[0.12em] font-medium text-[#f7ece6]/35 cursor-not-allowed transition truncate';
+
+      themeBtnGold.className = activeRibbonTheme === 'gold' ? activeClass : unlockedClass;
+      themeBtnRose.className = !roseUnlocked ? lockedClass : (activeRibbonTheme === 'rose' ? activeClass : unlockedClass);
+      themeBtnPearl.className = !pearlUnlocked ? lockedClass : (activeRibbonTheme === 'pearl' ? activeClass : unlockedClass);
+    }
+
+    [themeBtnGold, themeBtnRose, themeBtnPearl].forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const theme = btn.getAttribute('data-theme');
+        const maxLvl = currentUser ? Math.max(1, currentUser.highestUnlockedLevel || 1) : 1;
+        if (theme === 'rose' && maxLvl < 8) return;
+        if (theme === 'pearl' && maxLvl < 16) return;
+
+        activeRibbonTheme = theme;
+        updateRibbonThemeButtons();
+        if (currentUser) {
+          currentUser.activeRibbonTheme = theme;
+          await saveStoredProfile(currentUser);
+        }
+      });
+    });
+
     /* ==========================================================================
-       4. 25-LEVEL ESCALATING DIFFICULTY CONFIGURATION (Swift & Crisp Steering)
+       5. 50-LEVEL ESCALATING DIFFICULTY CONFIGURATION (10 Tiers × 5 Levels)
        ========================================================================== */
     function getLevelConfig(lvl) {
       const clamped = Math.max(1, Math.min(MAX_LEVELS, lvl));
       let tierName = 'Tier I • Awakening';
       let tierSubtitle = 'Steady hands. Guide the glowing ribbon through each ember without crossing your own trail.';
 
-      if (clamped >= 21) {
-        tierName = 'Tier V • The Promise';
-        tierSubtitle = 'Swift velocity, patrolling crimson thorns, and agile evasive embers stand between you and the ring.';
+      if (clamped >= 46) {
+        tierName = 'Tier X • The Eternal Promise';
+        tierSubtitle = 'The final five constellations. Swift velvet velocity and intricate thorn dances guard the ring.';
+      } else if (clamped >= 41) {
+        tierName = 'Tier IX • Sovereign Starlight';
+        tierSubtitle = 'Embers weave rapidly between patrolling thorns. Trust your instincts and glide cleanly.';
+      } else if (clamped >= 36) {
+        tierName = 'Tier VIII • Velvet Tempest';
+        tierSubtitle = 'Sharp hairpin turns and harmonic combos keep your warmth blazing across the arena.';
+      } else if (clamped >= 31) {
+        tierName = 'Tier VII • Celestial Waltz';
+        tierSubtitle = 'Shadow thorns sweep wider arcs while elusive embers dart away from direct approaches.';
+      } else if (clamped >= 26) {
+        tierName = 'Tier VI • Golden Odyssey';
+        tierSubtitle = 'A new chapter opens. The ribbon moves with heightened grace as the constellation deepens.';
+      } else if (clamped >= 21) {
+        tierName = 'Tier V • Heart’s Horizon';
+        tierSubtitle = 'Swift velocity, patrolling crimson thorns, and agile evasive embers test your precision.';
       } else if (clamped >= 16) {
         tierName = 'Tier IV • Crimson Veil';
         tierSubtitle = 'Shadow thorns patrol faster and the golden sanctuary narrows. Keep your warmth alive.';
@@ -1733,14 +2281,14 @@
         tierSubtitle = 'The ribbon glides faster and embers begin drifting across the dark velvet arena.';
       }
 
-      const targetEmbers = 6 + Math.floor((clamped - 1) * 0.3); // 6 up to 13 embers
-      const thornCount = Math.min(7, 2 + Math.floor((clamped - 1) * 0.22)); // 2 up to 7 thorns
-      const speed = 2.4 + (clamped - 1) * 0.068; // Faster, brisker glide (2.40 up to 4.03 px/frame)
-      const turnRate = Math.max(0.155, 0.205 - (clamped - 1) * 0.0014); // Sharper, snappier cornering
-      const warmthDecay = 0.036 + (clamped - 1) * 0.0015;
-      const emberDriftSpeed = clamped < 4 ? 0.1 : 0.24 + (clamped - 1) * 0.03;
-      const evadeStrength = clamped < 12 ? 0 : Math.min(1.05, (clamped - 11) * 0.075);
-      const arenaMargin = Math.min(36, 18 + Math.floor((clamped - 1) * 0.72));
+      const targetEmbers = 6 + Math.floor((clamped - 1) * 0.22);
+      const thornCount = Math.min(9, 2 + Math.floor((clamped - 1) * 0.15));
+      const speed = 2.4 + (clamped - 1) * 0.042;
+      const turnRate = Math.max(0.16, 0.205 - (clamped - 1) * 0.0008);
+      const warmthDecay = 0.036 + (clamped - 1) * 0.0009;
+      const emberDriftSpeed = clamped < 4 ? 0.1 : 0.24 + (clamped - 1) * 0.018;
+      const evadeStrength = clamped < 12 ? 0 : Math.min(1.25, (clamped - 11) * 0.032);
+      const arenaMargin = Math.min(40, 18 + Math.floor((clamped - 1) * 0.45));
 
       return {
         level: clamped,
@@ -1764,9 +2312,9 @@
 
       const cfg = getLevelConfig(selectedLevel);
       homeWelcomeUser.textContent = `Welcome, ${currentUser.username}`;
-      homeBestBadge.textContent = currentUser.inviteUnlocked
-        ? '25 / 25 • Unlocked'
-        : `Level ${maxUnlocked} / ${MAX_LEVELS}`;
+      homeBestBadge.textContent = (currentUser.completedLevels || 0) >= MAX_LEVELS
+        ? `${MAX_LEVELS}/${MAX_LEVELS} • Done`
+        : `Lv ${maxUnlocked} / ${MAX_LEVELS}`;
 
       selectedLevelLabel.textContent = `Level ${cfg.level} • ${cfg.tierName.split('•')[1].trim()}`;
       selectedLevelMeta.textContent = `${cfg.targetEmbers} Embers • ${cfg.thornCount} Shadow Thorns`;
@@ -1776,7 +2324,9 @@
       prevLevelBtn.disabled = selectedLevel <= 1;
       nextLevelBtn.disabled = selectedLevel >= maxUnlocked;
 
-      if (currentUser.inviteUnlocked) {
+      updateRibbonThemeButtons();
+
+      if (currentUser.inviteUnlocked || (currentUser.completedLevels || 0) >= MAX_LEVELS) {
         viewInviteShortcut.classList.remove('hidden');
       } else {
         viewInviteShortcut.classList.add('hidden');
@@ -1799,10 +2349,10 @@
     });
 
     /* ==========================================================================
-       5. SCREEN NAVIGATION & HAPTICS
+       6. SCREEN NAVIGATION, POLAROID 3D TILT & HAPTICS
        ========================================================================== */
     function setOverlayVisibility(targetScreen) {
-      [authScreen, introScreen, levelupScreen, failScreen, inviteScreen, countdownScreen].forEach((el) => {
+      [authScreen, introScreen, keepsakeScreen, levelupScreen, failScreen, inviteScreen, countdownScreen].forEach((el) => {
         if (el === targetScreen) {
           el.classList.remove('overlay-hidden');
           el.classList.add('overlay-visible');
@@ -1813,7 +2363,21 @@
       });
     }
 
-    // Target Event Timestamp: Wednesday, November 18, 2026 at 7:00 PM Local Time
+    // Subtle 3D tilt parallax on the Polaroid Memory Card
+    levelupScreen.addEventListener('pointermove', (e) => {
+      if (polaroidWrapper.classList.contains('hidden')) return;
+      const rect = polaroidCard.getBoundingClientRect();
+      const cx = rect.left + rect.width * 0.5;
+      const cy = rect.top + rect.height * 0.5;
+      const rotY = Math.max(-14, Math.min(14, ((e.clientX - cx) / (rect.width * 0.5)) * 11));
+      const rotX = Math.max(-14, Math.min(14, -((e.clientY - cy) / (rect.height * 0.5)) * 11));
+      polaroidCard.style.transform = `rotateX(${rotX.toFixed(1)}deg) rotateY(${rotY.toFixed(1)}deg)`;
+    });
+
+    levelupScreen.addEventListener('pointerleave', () => {
+      polaroidCard.style.transform = 'rotateX(0deg) rotateY(0deg)';
+    });
+
     const EVENT_TARGET_DATE = new Date(2026, 10, 18, 19, 0, 0).getTime();
     let countdownInterval = null;
 
@@ -1876,6 +2440,7 @@
       gameRunning = false;
       hud.classList.add('opacity-0', 'pointer-events-none');
       updateHomeLevelUI();
+      refreshKeepsakeUI();
       syncAudioLabels();
       setOverlayVisibility(introScreen);
 
@@ -1904,44 +2469,21 @@
       setOverlayVisibility(authScreen);
     });
 
-    homeBtn.addEventListener('click', () => {
-      showHomeScreen();
-    });
-
-    levelupHomeBtn.addEventListener('click', () => {
-      showHomeScreen();
-    });
-
-    failHomeBtn.addEventListener('click', () => {
-      showHomeScreen();
-    });
-
-    inviteHomeBtn.addEventListener('click', () => {
-      showHomeScreen();
-    });
-
-    countdownBtn.addEventListener('click', () => {
-      openCountdownScreen();
-    });
-
-    countdownBackInviteBtn.addEventListener('click', () => {
-      openInviteScreen();
-    });
-
-    countdownHomeBtn.addEventListener('click', () => {
-      showHomeScreen();
-    });
-
-    viewInviteShortcut.addEventListener('click', () => {
-      openInviteScreen();
-    });
+    homeBtn.addEventListener('click', showHomeScreen);
+    levelupHomeBtn.addEventListener('click', showHomeScreen);
+    failHomeBtn.addEventListener('click', showHomeScreen);
+    inviteHomeBtn.addEventListener('click', showHomeScreen);
+    countdownBtn.addEventListener('click', openCountdownScreen);
+    countdownBackInviteBtn.addEventListener('click', openInviteScreen);
+    countdownHomeBtn.addEventListener('click', showHomeScreen);
+    viewInviteShortcut.addEventListener('click', openInviteScreen);
 
     /* ==========================================================================
-       6. THE SILK THREAD — 25-LEVEL CHALLENGE + AMBIENT DRIFT ENGINE
+       7. THE SILK THREAD — 50-LEVEL CHALLENGE + CONSTELLATION REVEAL ENGINE
        ========================================================================== */
     let gameRunning = false;
     let homeAmbientRunning = false;
-    let gameMode = 'home'; // 'home' | 'play' | 'ambient' | 'levelup' | 'fail' | 'invite'
+    let gameMode = 'home';
 
     let activeConfig = getLevelConfig(1);
     let score = 0;
@@ -1952,11 +2494,11 @@
     let angularVelocity = 0;
     let lastFrameTime = performance.now();
 
-    // Gameplay Feel Enhancements State
-    let shieldTimer = 0; // Frames remaining for 1.5s spawn/pickup grace shield (90 frames @ 60fps)
+    let shieldTimer = 0;
     let comboCount = 0;
-    let comboTimer = 0; // Frames remaining to keep harmonic combo active
-    let sparkBursts = []; // Particle bursts for near-misses, pickups, and shield pulses
+    let comboTimer = 0;
+    let sparkBursts = [];
+    let themeTrailParticles = [];
 
     let silkTrail = [];
     let embers = [];
@@ -1985,7 +2527,6 @@
       pointer.rawX = e.clientX;
       pointer.rawY = e.clientY;
       pointer.isTouch = e.pointerType === 'touch';
-      // Offset target slightly above fingertip on touch screens so the finger never blocks the ribbon head
       const touchOffsetY = pointer.isTouch ? -44 : 0;
       pointer.x = e.clientX;
       pointer.y = Math.max(40, e.clientY + touchOffsetY);
@@ -2019,7 +2560,6 @@
       height = canvas.height = window.innerHeight;
     });
 
-    // Pause fairly if user switches apps on Android
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && gameMode === 'play') {
         showHomeScreen();
@@ -2074,15 +2614,15 @@
         y = topPad + Math.random() * Math.max(60, height - topPad - pad);
         if (Math.hypot(x - safeX, y - safeY) > 150) break;
       }
-      const speedScale = 0.34 + cfg.level * 0.028;
+      const speedScale = 0.34 + cfg.level * 0.016;
       return {
         x,
         y,
         vx: (Math.random() - 0.5) * speedScale * 2,
         vy: (Math.random() - 0.5) * speedScale * 2,
-        radius: 10 + Math.min(4.5, cfg.level * 0.16),
+        radius: 10 + Math.min(4.5, cfg.level * 0.09),
         angle: Math.random() * Math.PI * 2,
-        spin: (Math.random() < 0.5 ? -1 : 1) * (0.018 + cfg.level * 0.0012),
+        spin: (Math.random() < 0.5 ? -1 : 1) * (0.018 + cfg.level * 0.0007),
         nearMissCooldown: 0
       };
     }
@@ -2098,11 +2638,11 @@
       angularVelocity = 0;
       lastFrameTime = performance.now();
 
-      // Activate 1.5-second golden grace shield on level start
       shieldTimer = 90;
       comboCount = 0;
       comboTimer = 0;
       sparkBursts = [];
+      themeTrailParticles = [];
       updateComboBadge();
 
       pointer.x = headX;
@@ -2140,6 +2680,7 @@
     function startAmbientMode() {
       initAmbientSynth();
       ripples = [];
+      themeTrailParticles = [];
       headX = width / 2;
       headY = height / 2;
       pointer.x = headX;
@@ -2197,11 +2738,49 @@
         setOverlayVisibility(inviteScreen);
       } else {
         gameMode = 'levelup';
-        const nextLvl = activeConfig.level + 1;
+        const lvl = activeConfig.level;
+        const nextLvl = lvl + 1;
         const nextCfg = getLevelConfig(nextLvl);
         selectedLevel = nextLvl;
-        levelupTierInfo.textContent = `${activeConfig.tierName} • Cleared`;
-        levelupTitle.textContent = `Level ${activeConfig.level} Complete`;
+
+        // Check if this level is a 5-level Tier Milestone (5, 10, 15, 20, 25, 30, 35, 40, 45)
+        if (lvl % 5 === 0) {
+          const slotMap = {
+            5: 'chapter_1',
+            10: 'chapter_1',
+            15: 'chapter_2',
+            20: 'chapter_2',
+            25: 'chapter_3',
+            30: 'chapter_3',
+            35: 'chapter_4',
+            40: 'chapter_4',
+            45: 'chapter_4'
+          };
+          const slotKey = slotMap[lvl] || 'chapter_1';
+          const mem = keepsakeData[slotKey];
+
+          polaroidCard.style.transform = 'rotateX(0deg) rotateY(0deg)';
+          if (mem && mem.dataUrl) {
+            polaroidImg.src = mem.dataUrl;
+            polaroidImg.classList.remove('hidden');
+            polaroidFallbackArt.classList.add('hidden');
+          } else {
+            polaroidImg.classList.add('hidden');
+            polaroidFallbackArt.classList.remove('hidden');
+          }
+          polaroidCaption.textContent = (mem && mem.caption) || DEFAULT_CHAPTER_CAPTIONS[slotKey];
+          polaroidWrapper.classList.remove('hidden');
+        } else {
+          polaroidWrapper.classList.add('hidden');
+        }
+
+        // Notify if a new Ribbon Theme just unlocked
+        let unlockNotice = '';
+        if (lvl === 7) unlockNotice = ' • Rose Velvet Ribbon Unlocked!';
+        if (lvl === 15) unlockNotice = ' • Starlight Pearl Ribbon Unlocked!';
+
+        levelupTierInfo.textContent = `${activeConfig.tierName} • Cleared${unlockNotice}`;
+        levelupTitle.textContent = `Level ${lvl} Complete`;
         levelupSubtitle.textContent = `Next: Level ${nextLvl} (${nextCfg.targetEmbers} Embers, ${nextCfg.thornCount} Shadow Thorns).`;
         nextLevelBtnModal.textContent = `Continue to Level ${nextLvl}`;
         setOverlayVisibility(levelupScreen);
@@ -2214,8 +2793,50 @@
     nextLevelBtnModal.addEventListener('click', () => startLevel(Math.min(MAX_LEVELS, activeConfig.level + 1)));
 
     /* ==========================================================================
-       7. RENDERING LOOPS (Home Ambient + Gameplay + Ring Finale)
+       8. RENDERING LOOPS (Constellation Photo Reveal + Theme Silk + Ring Finale)
        ========================================================================== */
+    function drawCoverImage(img, alpha = 0.25) {
+      if (!img || !img.complete || !img.naturalWidth) return;
+      const scale = Math.max(width / img.naturalWidth, height / img.naturalHeight);
+      const dw = img.naturalWidth * scale;
+      const dh = img.naturalHeight * scale;
+      const dx = (width - dw) * 0.5;
+      const dy = (height - dh) * 0.5;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(img, dx, dy, dw, dh);
+      ctx.restore();
+    }
+
+    function drawConstellationRevealBackdrop() {
+      const bgImg = keepsakeData.constellation_bg.img;
+      if (!bgImg) return;
+
+      let progressRatio = 0.15;
+      if (gameMode === 'play') {
+        const lvlProgress = ((activeConfig.level - 1) + (score / Math.max(1, activeConfig.targetEmbers))) / MAX_LEVELS;
+        progressRatio = 0.06 + lvlProgress * 0.34; // Gradually brightens from 6% to 40%
+      } else if (gameMode === 'invite' || gameMode === 'countdown') {
+        progressRatio = 0.44;
+      }
+
+      drawCoverImage(bgImg, progressRatio);
+
+      // Illuminate localized constellation spotlights around collected embers
+      if (gameMode === 'play' && anchoredConstellation.length > 0) {
+        ctx.save();
+        ctx.beginPath();
+        anchoredConstellation.forEach((pt) => {
+          ctx.moveTo(pt.x + 68, pt.y);
+          ctx.arc(pt.x, pt.y, 68, 0, Math.PI * 2);
+        });
+        ctx.clip();
+        drawCoverImage(bgImg, Math.min(0.62, progressRatio + 0.24));
+        ctx.restore();
+      }
+    }
+
     function drawBackgroundParticles(bass) {
       ambientParticles.forEach((p) => {
         p.x += p.vx;
@@ -2233,6 +2854,88 @@
         ctx.arc(p.x, p.y, p.r + bass * 1.2, 0, Math.PI * 2);
         ctx.fill();
       });
+    }
+
+    function spawnThemeTrailAccent(x, y) {
+      if (activeRibbonTheme === 'rose' && Math.random() < 0.35) {
+        themeTrailParticles.push({
+          type: 'petal',
+          x: x + (Math.random() - 0.5) * 8,
+          y: y + (Math.random() - 0.5) * 8,
+          vx: (Math.random() - 0.5) * 0.7,
+          vy: 0.35 + Math.random() * 0.65,
+          rot: Math.random() * Math.PI * 2,
+          vrot: (Math.random() - 0.5) * 0.08,
+          life: 1.0
+        });
+      } else if (activeRibbonTheme === 'pearl' && Math.random() < 0.4) {
+        themeTrailParticles.push({
+          type: 'star',
+          x: x + (Math.random() - 0.5) * 10,
+          y: y + (Math.random() - 0.5) * 10,
+          vx: (Math.random() - 0.5) * 0.45,
+          vy: (Math.random() - 0.5) * 0.45,
+          size: 2 + Math.random() * 2.2,
+          life: 1.0
+        });
+      }
+    }
+
+    function updateAndDrawThemeTrailParticles(dt) {
+      for (let i = themeTrailParticles.length - 1; i >= 0; i--) {
+        const pt = themeTrailParticles[i];
+        pt.x += pt.vx * dt;
+        pt.y += pt.vy * dt;
+        pt.life -= 0.024 * dt;
+        if (pt.life <= 0) {
+          themeTrailParticles.splice(i, 1);
+          continue;
+        }
+        ctx.save();
+        if (pt.type === 'petal') {
+          pt.rot += pt.vrot * dt;
+          ctx.translate(pt.x, pt.y);
+          ctx.rotate(pt.rot);
+          ctx.fillStyle = `rgba(232, 126, 148, ${pt.life * 0.78})`;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.6, 2.0, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = `rgba(245, 248, 255, ${pt.life * 0.85})`;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.size * 0.55, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    function getRibbonPalette(comboBoost) {
+      if (activeRibbonTheme === 'rose') {
+        return {
+          shadow: '#f07a90',
+          r: Math.round(218 + comboBoost * 37),
+          g: Math.round(108 + comboBoost * 75),
+          b: Math.round(132 + comboBoost * 80),
+          head: '#ffeef2'
+        };
+      }
+      if (activeRibbonTheme === 'pearl') {
+        return {
+          shadow: '#dbe6ff',
+          r: Math.round(236 + comboBoost * 19),
+          g: Math.round(240 + comboBoost * 15),
+          b: 255,
+          head: '#ffffff'
+        };
+      }
+      return {
+        shadow: comboCount >= 2 ? '#fff2d6' : '#e6b87d',
+        r: Math.round(230 + comboBoost * 25),
+        g: Math.round(184 + comboBoost * 60),
+        b: Math.round(125 + comboBoost * 95),
+        head: '#fff8ec'
+      };
     }
 
     function renderHomeAmbientLoop() {
@@ -2254,7 +2957,6 @@
       const leftBound = margin;
       const rightBound = width - margin;
 
-      // Update Spawn Grace Shield & Harmonic Combo Timers
       if (shieldTimer > 0) {
         shieldTimer = Math.max(0, shieldTimer - dt);
       }
@@ -2266,7 +2968,6 @@
         }
       }
 
-      // Razor-sharp, agile cornering toward offset pointer
       let turnSharpness = 0;
       if (pointer.active) {
         const dx = pointer.x - headX;
@@ -2297,13 +2998,13 @@
       headX += Math.cos(headingAngle) * stepDist;
       headY += Math.sin(headingAngle) * stepDist;
 
-      // Arena Boundary Check
+      spawnThemeTrailAccent(headX, headY);
+
       if (headX < leftBound || headX > rightBound || headY < topBound || headY > bottomBound) {
         triggerFail('The ribbon touched the outer golden boundary.');
         return;
       }
 
-      // Append smoothly interpolated points along the step so sharp corners never look faceted
       const prevPt = silkTrail[silkTrail.length - 1];
       const segLen = prevPt ? Math.hypot(headX - prevPt.x, headY - prevPt.y) : 0;
       if (segLen > 2.2) {
@@ -2324,7 +3025,6 @@
         silkTrail.shift();
       }
 
-      // Self-Tangle Check (paused while grace shield is active)
       if (shieldTimer <= 0) {
         for (let i = 0; i < silkTrail.length - 32; i++) {
           if (Math.hypot(headX - silkTrail[i].x, headY - silkTrail[i].y) < 7.2) {
@@ -2334,7 +3034,6 @@
         }
       }
 
-      // Warmth Decay
       warmth -= cfg.warmthDecay * dt;
       warmthBar.style.width = `${Math.max(0, warmth)}%`;
       if (warmth <= 0) {
@@ -2349,10 +3048,9 @@
       ctx.strokeRect(leftBound, topBound, rightBound - leftBound, bottomBound - topBound);
       ctx.restore();
 
-      // Draw Subtle Touch Reticle & Offset Guide Line when finger is down
+      // Draw Subtle Touch Reticle & Offset Guide Line
       if (pointer.active) {
         ctx.save();
-        // Faint dashed guide from touch target to ribbon head
         ctx.strokeStyle = 'rgba(230, 184, 125, 0.14)';
         ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
@@ -2362,14 +3060,12 @@
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Glowing target ring at offset steering point
         ctx.strokeStyle = 'rgba(255, 245, 228, 0.35)';
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.arc(pointer.x, pointer.y, 8 + bass * 2, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Subtle outer halo around actual fingertip
         if (pointer.isTouch) {
           ctx.strokeStyle = 'rgba(230, 184, 125, 0.16)';
           ctx.beginPath();
@@ -2382,8 +3078,8 @@
       // Draw Constellation Lines Between Collected Embers
       if (anchoredConstellation.length > 1) {
         ctx.save();
-        ctx.strokeStyle = 'rgba(230, 184, 125, 0.25)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(230, 184, 125, 0.32)';
+        ctx.lineWidth = 1.1;
         ctx.beginPath();
         anchoredConstellation.forEach((pt, idx) => {
           if (idx === 0) ctx.moveTo(pt.x, pt.y);
@@ -2398,7 +3094,6 @@
         const emb = embers[i];
         emb.phase += 0.05 * dt;
 
-        // Elusive evasion in Tier III+
         if (cfg.evadeStrength > 0) {
           const distToHead = Math.hypot(emb.x - headX, emb.y - headY);
           if (distToHead < 120 && distToHead > 1) {
@@ -2424,24 +3119,20 @@
         if (emb.y < topBound + embPad) { emb.y = topBound + embPad; emb.vy *= -1; }
         if (emb.y > bottomBound - embPad) { emb.y = bottomBound - embPad; emb.vy *= -1; }
 
-        // Check Collection (generous 28px pickup radius)
         if (Math.hypot(headX - emb.x, headY - emb.y) < 28) {
           anchoredConstellation.push({ x: emb.x, y: emb.y });
           score++;
 
-          // Update Harmonic Combo State
           if (comboTimer > 0) {
             comboCount++;
           } else {
             comboCount = 1;
           }
-          comboTimer = 260; // ~4.3 seconds to chain the next ember
+          comboTimer = 260;
           updateComboBadge();
 
           const comboWarmthBonus = Math.min(12, (comboCount - 1) * 3);
           warmth = Math.min(100, warmth + 28 + comboWarmthBonus);
-
-          // Grant brief 0.6s micro-grace shield on pickup so risky grabs near thorns feel heroic
           shieldTimer = Math.max(shieldTimer, 36);
 
           spawnSparkBurst(emb.x, emb.y, 12 + Math.min(8, comboCount * 2), '255, 245, 224', 2.8);
@@ -2465,7 +3156,6 @@
           continue;
         }
 
-        // Draw Glowing Ember
         const glowR = 9 + Math.sin(emb.phase) * 2.5 + bass * 8;
         const grad = ctx.createRadialGradient(emb.x, emb.y, 1, emb.x, emb.y, glowR * 2.3);
         grad.addColorStop(0, '#fff7e8');
@@ -2477,7 +3167,7 @@
         ctx.fill();
       }
 
-      // Update & Draw Crimson Shadow Thorns + Near-Miss Spark Detection
+      // Update & Draw Crimson Shadow Thorns + Near-Miss Sparks
       for (let i = 0; i < thorns.length; i++) {
         const th = thorns[i];
         th.x += th.vx * dt;
@@ -2493,10 +3183,8 @@
 
         const distToThorn = Math.hypot(headX - th.x, headY - th.y);
 
-        // Collision check (deflected gently if spawn/pickup grace shield is active)
         if (distToThorn < th.radius + 3.5) {
           if (shieldTimer > 0) {
-            // Deflect thorn away safely during grace shield
             const pushAng = Math.atan2(th.y - headY, th.x - headX);
             th.vx = Math.cos(pushAng) * Math.max(1.2, Math.hypot(th.vx, th.vy));
             th.vy = Math.sin(pushAng) * Math.max(1.2, Math.hypot(th.vx, th.vy));
@@ -2506,7 +3194,6 @@
             return;
           }
         } else if (distToThorn < th.radius + 24 && th.nearMissCooldown <= 0 && shieldTimer <= 0) {
-          // Near-Miss Spark Reward!
           th.nearMissCooldown = 75;
           warmth = Math.min(100, warmth + 7);
           spawnSparkBurst((headX + th.x) * 0.5, (headY + th.y) * 0.5, 9, '255, 224, 166', 2.2);
@@ -2514,7 +3201,6 @@
           pulseHeartbeat('spark');
         }
 
-        // Draw Rotating 4-Point Shadow Star/Thorn
         ctx.save();
         ctx.translate(th.x, th.y);
         ctx.rotate(th.angle);
@@ -2544,7 +3230,9 @@
         ctx.restore();
       }
 
-      // Update & Draw Spark Bursts (Near-Miss & Ember Collection Sparks)
+      // Draw Theme Trail Particles & Spark Bursts
+      updateAndDrawThemeTrailParticles(dt);
+
       for (let i = sparkBursts.length - 1; i >= 0; i--) {
         const sp = sparkBursts[i];
         sp.x += sp.vx * dt;
@@ -2562,13 +3250,15 @@
         ctx.fill();
       }
 
-      // Draw Smooth Quadratic Silk Ribbon (Brightens dynamically with Harmonic Combo)
+      // Draw Smooth Quadratic Silk Ribbon using Active Theme Palette
       if (silkTrail.length > 2) {
         const comboBoost = Math.min(1, Math.max(0, comboCount - 1) * 0.25);
+        const pal = getRibbonPalette(comboBoost);
+
         ctx.save();
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.shadowColor = comboCount >= 2 ? '#fff2d6' : '#e6b87d';
+        ctx.shadowColor = pal.shadow;
         ctx.shadowBlur = 14 + bass * 12 + comboBoost * 12;
 
         for (let i = 1; i < silkTrail.length - 1; i++) {
@@ -2578,10 +3268,7 @@
           const prevMidX = i === 1 ? silkTrail[0].x : (silkTrail[i - 1].x + silkTrail[i].x) * 0.5;
           const prevMidY = i === 1 ? silkTrail[0].y : (silkTrail[i - 1].y + silkTrail[i].y) * 0.5;
 
-          const rCol = Math.round(230 + comboBoost * 25);
-          const gCol = Math.round(184 + comboBoost * 60);
-          const bCol = Math.round(125 + comboBoost * 95);
-          ctx.strokeStyle = `rgba(${rCol}, ${gCol}, ${bCol}, ${0.18 + ratio * 0.82})`;
+          ctx.strokeStyle = `rgba(${pal.r}, ${pal.g}, ${pal.b}, ${0.18 + ratio * 0.82})`;
           ctx.lineWidth = 1.5 + ratio * (4.5 + comboBoost * 1.4);
           ctx.beginPath();
           ctx.moveTo(prevMidX, prevMidY);
@@ -2589,7 +3276,6 @@
           ctx.stroke();
         }
 
-        // Draw Golden Shimmer Grace Shield around head when active
         if (shieldTimer > 0) {
           const shieldAlpha = Math.min(0.85, (shieldTimer / 90) * 0.9);
           const shieldRadius = 15 + Math.sin(performance.now() * 0.02) * 2.5;
@@ -2600,8 +3286,7 @@
           ctx.stroke();
         }
 
-        // Luminous Head Spark
-        ctx.fillStyle = '#fff8ec';
+        ctx.fillStyle = pal.head;
         ctx.beginPath();
         ctx.arc(headX, headY, 4.2 + bass * 2 + comboBoost * 1.2, 0, Math.PI * 2);
         ctx.fill();
@@ -2609,11 +3294,13 @@
       }
     }
 
-    function updateAndDrawAmbientDrift(bass) {
+    function updateAndDrawAmbientDrift(bass, dt) {
       headX += (pointer.x - headX) * 0.14;
       headY += (pointer.y - headY) * 0.14;
       silkTrail.push({ x: headX, y: headY });
       while (silkTrail.length > 48) silkTrail.shift();
+      spawnThemeTrailAccent(headX, headY);
+      updateAndDrawThemeTrailParticles(dt);
 
       for (let i = ripples.length - 1; i >= 0; i--) {
         const rp = ripples[i];
@@ -2631,13 +3318,14 @@
       }
 
       if (silkTrail.length > 2) {
+        const pal = getRibbonPalette(0.2);
         ctx.save();
         ctx.lineCap = 'round';
-        ctx.shadowColor = '#e6b87d';
+        ctx.shadowColor = pal.shadow;
         ctx.shadowBlur = 18 + bass * 16;
         for (let i = 1; i < silkTrail.length; i++) {
           const ratio = i / silkTrail.length;
-          ctx.strokeStyle = `rgba(230, 184, 125, ${ratio * 0.85})`;
+          ctx.strokeStyle = `rgba(${pal.r}, ${pal.g}, ${pal.b}, ${ratio * 0.85})`;
           ctx.lineWidth = ratio * 6;
           ctx.beginPath();
           ctx.moveTo(silkTrail[i - 1].x, silkTrail[i - 1].y);
@@ -2648,19 +3336,41 @@
       }
     }
 
-    function drawInviteRingAura(bass) {
+    function drawInviteRingAura(bass, now) {
       const cx = width / 2;
       const cy = height / 2;
-      const r = Math.min(width, height) * 0.28;
+      const r = Math.min(width, height) * 0.30;
+
+      // Sync SVG Promise Ring shimmer with live music energy
+      if (inviteRingSvg) {
+        inviteRingSvg.style.transform = `scale(${(1 + bass * 0.08).toFixed(3)})`;
+      }
+      if (cdRingSvg) {
+        cdRingSvg.style.transform = `scale(${(1 + bass * 0.07).toFixed(3)})`;
+      }
+      if (inviteDiamondGlint) {
+        inviteDiamondGlint.style.opacity = `${Math.min(1, 0.45 + bass * 0.65).toFixed(2)}`;
+      }
 
       ctx.save();
-      ctx.strokeStyle = `rgba(230, 184, 125, ${0.25 + bass * 0.35})`;
-      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = `rgba(230, 184, 125, ${0.24 + bass * 0.32})`;
+      ctx.lineWidth = 2.2;
       ctx.shadowColor = '#e6b87d';
       ctx.shadowBlur = 24 + bass * 20;
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.stroke();
+
+      // Orbiting golden sparkle accents around the invitation ring aura
+      for (let i = 0; i < 6; i++) {
+        const ang = now * 0.0007 + (i * Math.PI * 2) / 6;
+        const sx = cx + Math.cos(ang) * r;
+        const sy = cy + Math.sin(ang) * r;
+        ctx.fillStyle = `rgba(255, 245, 224, ${0.4 + bass * 0.5})`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 2.2 + bass * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
 
@@ -2671,24 +3381,25 @@
       lastFrameTime = now;
 
       const bass = getBassEnergy();
-      ctx.fillStyle = gameMode === 'play' ? 'rgba(11, 5, 8, 0.34)' : 'rgba(11, 5, 8, 0.24)';
+      ctx.fillStyle = gameMode === 'play' ? 'rgba(11, 5, 8, 0.38)' : 'rgba(11, 5, 8, 0.26)';
       ctx.fillRect(0, 0, width, height);
 
+      drawConstellationRevealBackdrop();
       drawBackgroundParticles(bass);
 
       if (gameMode === 'play') {
         updateAndDrawGameplay(bass, dt);
       } else if (gameMode === 'ambient') {
-        updateAndDrawAmbientDrift(bass);
+        updateAndDrawAmbientDrift(bass, dt);
       } else if (gameMode === 'invite' || gameMode === 'countdown') {
-        drawInviteRingAura(bass);
+        drawInviteRingAura(bass, now);
       }
 
       requestAnimationFrame(gameLoop);
     }
 
     /* ==========================================================================
-       8. INITIALIZATION
+       9. INITIALIZATION
        ========================================================================== */
     if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
       window.addEventListener('load', () => {
@@ -2696,6 +3407,7 @@
       });
     }
 
+    loadKeepsakesFromDB();
     loadCustomTracksFromDB();
     checkSavedQuickProfile();
     setAuthMode('signin');
